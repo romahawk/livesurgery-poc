@@ -1,0 +1,102 @@
+body {
+  font-family: sans-serif;
+  background: #f8f9fa;
+  margin: 0;
+  padding: 0;
+}
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 250px;
+  background-color: #ffffff;
+  padding: 1rem;
+  border-right: 1px solid #ccc;
+  box-shadow: 0 0 6px rgba(0,0,0,0.05);
+}
+
+.sidebar h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.source {
+  background-color: #f4f4f4;
+  margin-bottom: 1rem;
+  padding: 0.6rem;
+  border-radius: 4px;
+  cursor: grab;
+  transition: background 0.2s;
+}
+
+.source:hover {
+  background-color: #e0e0e0;
+}
+
+.main-content {
+  flex: 1;
+  padding: 1rem;
+}
+
+.drop-zone {
+  border: 2px dashed #ccc;
+  padding: 1rem;
+  min-height: 300px;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.drop-zone p {
+  color: #888;
+  font-size: 1rem;
+}
+
+.dropped-video {
+  margin-top: 1rem;
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+.thumbnails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: flex-start;
+}
+
+.thumbnails video {
+  flex: 1 1 200px;
+  max-width: 200px;
+  height: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.media-wrapper {
+  position: relative;
+  display: inline-block;
+  margin: 0.5rem;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(255, 0, 0, 0.8);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  z-index: 1;
+}
+
+.remove-btn:hover {
+  background: red;
+}

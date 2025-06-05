@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Livesurgery PoC - Drag & Drop UI</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .drag-icon {
+      margin-right: 8px;
+      cursor: grab;
+    }
+    .media-wrapper {
+      position: relative;
+      display: inline-block;
+      margin: 0.5rem;
+    }
+    .remove-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: rgba(255, 0, 0, 0.8);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      z-index: 1;
+    }
+    .remove-btn:hover {
+      background: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>🎛 Sources</h2>
+      <div class="source" draggable="true" data-src="endoscope.mp4">
+        <span class="drag-icon">☰</span> Endoscope
+      </div>
+      <div class="source" draggable="true" data-src="microscope.mp4">
+        <span class="drag-icon">☰</span> Microscope
+      </div>
+      <div class="source" draggable="true" data-src="or_overview.mp4">
+        <span class="drag-icon">☰</span> OR Camera
+      </div>
+      <div class="source" draggable="true" data-src="vital_signs.mp4">
+        <span class="drag-icon">☰</span> Vitals Monitor
+      </div>
+      <div class="source" draggable="true" data-src="audio_feed.mp3">
+        <span class="drag-icon">☰</span> Anesthesiologist Mic 🎙
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div id="main-drop" class="drop-zone">
+        <p>Drop a video here (main display)</p>
+      </div>
+
+      <div id="thumbnail-drop" class="drop-zone thumbnails">
+        <p>Drop additional feeds here (thumbnails)</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    document.querySelectorAll(".source").forEach(src => {
+      src.addEventListener("dragstart", e => {
+        e.dataTransfer.setData("text/plain", src.dataset.src);
+      });
+    });
+
+    document.querySelectorAll(".drop-zone").forEach(zone => {
+      zone.addEventListener("dragover", e => e.preventDefault());
+
+      zone.addEventListener("drop", e => {
+        e.preventDefault();
+        const file = e.dataTransfer.getData("text/plain");
+
+        if (file.endsWith(".mp4")) {
+          const wrapper = createRemovableMediaElement("video", "http://localhost:8000/videos/" + file);
+          if (zone.id === "main-drop") {
+            zone.innerHTML = "";
+          }
+          zone.appendChild(wrapper);
+        }
+
+        if (file.endsWith(".mp3")) {
+          const wrapper = createRemovableMediaElement("audio", "http://localhost:8000/audio/" + file);
+          zone.appendChild(wrapper);
+        }
+      });
+    });
+
+    function createRemovableMediaElement(type, src) {
+      const wrapper = document.createElement("div");
+      wrapper.classList.add("media-wrapper");
+
+      const media = document.createElement(type);
+      media.src = src;
+      media.controls = true;
+      media.autoplay = true;
+      if (type === "video") {
+        media.loop = true;
+        media.muted = true;
+        media.classList.add("dropped-video");
+      }
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "remove-btn";
+      removeBtn.textContent = "🗑️";
+      removeBtn.onclick = () => wrapper.remove();
+
+      wrapper.appendChild(removeBtn);
+      wrapper.appendChild(media);
+
+      return wrapper;
+    }
+  </script>
+</body>
+</html>
