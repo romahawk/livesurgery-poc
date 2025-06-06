@@ -1,133 +1,78 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Drag and drop logic
-  document.querySelectorAll(".source").forEach(src => {
-    src.addEventListener("dragstart", e => {
+  // Tabs, drag/drop, remove logic stays here ✅
+
+  // Drag sources
+  const sources = document.querySelectorAll(".source");
+  sources.forEach((src) => {
+    src.addEventListener("dragstart", (e) => {
       e.dataTransfer.setData("text/plain", src.dataset.src);
     });
   });
 
-  document.querySelectorAll(".drop-zone").forEach(zone => {
-    zone.addEventListener("dragover", e => e.preventDefault());
-
-    zone.addEventListener("drop", e => {
-      e.preventDefault();
-      const file = e.dataTransfer.getData("text/plain");
-
-      if (file.endsWith(".mp4")) {
-        const wrapper = createRemovableMediaElement("video", "http://localhost:8000/videos/" + file);
-        if (zone.id === "main-drop") {
-          zone.innerHTML = "";
-        }
-        zone.appendChild(wrapper);
-      }
-
-      if (file.endsWith(".mp3")) {
-        const wrapper = createRemovableMediaElement("audio", "http://localhost:8000/audio/" + file);
-        zone.appendChild(wrapper);
-      }
+  // Tabs
+  const buttons = document.querySelectorAll(".tab-button");
+  const tabs = document.querySelectorAll(".tab-content");
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const target = btn.dataset.tab;
+      buttons.forEach((b) => b.classList.remove("bg-blue-600", "text-white"));
+      btn.classList.add("bg-blue-600", "text-white");
+      tabs.forEach((tab) => {
+        tab.classList.add("hidden");
+        if (tab.id === `tab-${target}`) tab.classList.remove("hidden");
+      });
     });
   });
 
-  function createRemovableMediaElement(type, src) {
-    const wrapper = document.createElement("div");
-    wrapper.classList.add("media-wrapper");
+  // Drop zones
+  const dropZones = document.querySelectorAll("#tab-live .drop-zone");
+  dropZones.forEach((zone) => {
+    zone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      zone.classList.add("border-blue-400", "bg-blue-50");
+    });
+    zone.addEventListener("dragleave", () => {
+      zone.classList.remove("border-blue-400", "bg-blue-50");
+    });
+    zone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const src = e.dataTransfer.getData("text/plain");
+      zone.innerHTML = `
+  <div class="relative w-full h-full">
+    <video src="videos/${src}" autoplay loop muted controls class="w-full h-full object-cover rounded"></video>
+    <button class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 text-xs hover:bg-red-600" onclick="removeVideo(this)">
+      ❌
+    </button>
+  </div>`;
 
-    const media = document.createElement(type);
-    media.src = src;
-    media.controls = true;
-    media.autoplay = true;
+      zone.classList.remove("border-blue-400", "bg-blue-50");
+    });
+  });
 
-    if (type === "video") {
-      media.loop = true;
-      media.muted = true;
-      media.classList.add("dropped-video");
-    }
+  window.removeVideo = (btn) => {
+    const zone = btn.closest(".drop-zone");
+    zone.innerHTML = "Drop Source Here";
+  };
 
-    const removeBtn = document.createElement("button");
-    removeBtn.className = "remove-btn";
-    removeBtn.textContent = "🗑️";
-    removeBtn.onclick = () => wrapper.remove();
-
-    const overlay = document.createElement("div");
-    overlay.className = "media-overlay";
-    overlay.textContent = inferLabelFromSrc(src);
-
-    wrapper.appendChild(removeBtn);
-    wrapper.appendChild(overlay);
-    wrapper.appendChild(media);
-
-    return wrapper;
+  // ✅ Dropdown
+  const dropdownBtn = document.getElementById("dropdownButton");
+  const dropdownMenu = document.getElementById("dropdownMenu");
+  if (dropdownBtn && dropdownMenu) {
+    dropdownBtn.addEventListener("click", () => {
+      dropdownMenu.classList.toggle("hidden");
+    });
   }
 
-  function inferLabelFromSrc(src) {
-    if (src.includes("endoscope")) return "🔍 Endoscope";
-    if (src.includes("microscope")) return "🔬 Microscope";
-    if (src.includes("or_overview")) return "🎥 OR Camera";
-    if (src.includes("vital_signs")) return "📊 Vitals Monitor";
-    if (src.includes("audio_feed")) return "🎙 Mic Audio";
-    return "🎞 Feed";
+  // ✅ Drawer
+  const openDrawer = document.getElementById("openDrawerBtn");
+  const closeDrawer = document.getElementById("closeDrawerBtn");
+  const drawer = document.getElementById("sideDrawer");
+  if (openDrawer && closeDrawer && drawer) {
+    openDrawer.addEventListener("click", () => {
+      drawer.classList.remove("translate-x-full");
+    });
+    closeDrawer.addEventListener("click", () => {
+      drawer.classList.add("translate-x-full");
+    });
   }
-
-  // Session logic
-  const startBtn = document.getElementById("start-session");
-  const pauseBtn = document.getElementById("pause-session");
-  const stopBtn = document.getElementById("stop-session");
-
-  const sessionSetup = document.getElementById("session-setup");
-  const sessionDisplay = document.getElementById("session-display");
-
-  const surgeonName = document.getElementById("surgeon-name");
-  const procedureName = document.getElementById("procedure-name");
-
-  const surgeonSelect = document.getElementById("surgeon-select");
-  const procedureSelect = document.getElementById("procedure-select");
-
-  const timerEl = document.getElementById("session-timer");
-
-  let seconds = 0;
-  let timerInterval = null;
-  let isPaused = false;
-
-  function formatTime(sec) {
-    const min = String(Math.floor(sec / 60)).padStart(2, '0');
-    const s = String(sec % 60).padStart(2, '0');
-    return `${min}:${s}`;
-  }
-
-  function startSession() {
-    surgeonName.textContent = surgeonSelect.value;
-    procedureName.textContent = procedureSelect.value;
-    sessionSetup.style.display = "none";
-    sessionDisplay.style.display = "block";
-    seconds = 0;
-    timerEl.textContent = "00:00";
-    isPaused = false;
-    pauseBtn.textContent = "⏸";
-
-    if (timerInterval) clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-      if (!isPaused) {
-        seconds++;
-        timerEl.textContent = formatTime(seconds);
-      }
-    }, 1000);
-  }
-
-  function pauseSession() {
-    isPaused = !isPaused;
-    pauseBtn.textContent = isPaused ? "▶️" : "⏸";
-  }
-
-  function stopSession() {
-    clearInterval(timerInterval);
-    timerInterval = null;
-    seconds = 0;
-    timerEl.textContent = "00:00";
-    sessionDisplay.style.display = "none";
-    sessionSetup.style.display = "flex";
-  }
-
-  startBtn.addEventListener("click", startSession);
-  pauseBtn.addEventListener("click", pauseSession);
-  stopBtn.addEventListener("click", stopSession);
 });

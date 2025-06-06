@@ -1,40 +1,136 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Livesurgery PoC - Tailwind UI</title>
+  <title>Livesurgery PoC - Tabs + Sidebar</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 text-gray-900">
-  <div class="flex h-screen">
-    <aside class="w-1/4 bg-white p-4 border-r overflow-y-auto">
-      <h2 class="text-xl font-semibold mb-4">🎛 Sources</h2>
-      <div class="space-y-2">
-        <div class="source flex items-center gap-2 p-2 border rounded cursor-move bg-gray-100" draggable="true" data-src="endoscope.mp4">
-          <span class="text-lg">🔍</span> Endoscope
-        </div>
-        <div class="source flex items-center gap-2 p-2 border rounded cursor-move bg-gray-100" draggable="true" data-src="microscope.mp4">
-          <span class="text-lg">🔬</span> Microscope
-        </div>
-        <div class="source flex items-center gap-2 p-2 border rounded cursor-move bg-gray-100" draggable="true" data-src="or_overview.mp4">
-          <span class="text-lg">🎥</span> OR Overview
-        </div>
-        <div class="source flex items-center gap-2 p-2 border rounded cursor-move bg-gray-100" draggable="true" data-src="vital_signs.mp4">
-          <span class="text-lg">❤️</span> Vital Signs
+  <div class="flex flex-col h-screen">
+    <!-- Top Nav Tabs -->
+    <nav class="bg-white shadow px-4 py-2 flex space-x-4 border-b">
+      <button class="tab-button px-4 py-2 rounded bg-blue-600 text-white" data-tab="live">Live</button>
+      <button class="tab-button px-4 py-2 rounded hover:bg-blue-100" data-tab="archive">Archive</button>
+      <button class="tab-button px-4 py-2 rounded hover:bg-blue-100" data-tab="analytics">Analytics</button>
+    </nav>
+
+    <!-- Tab Content Area -->
+    <div class="flex-1 overflow-y-auto p-0">
+      <!-- Live Tab: with Sidebar -->
+      <div id="tab-live" class="tab-content flex h-full">
+        <!-- Sidebar -->
+        <aside class="w-1/4 bg-white p-4 border-r overflow-y-auto">
+          <h2 class="text-xl font-semibold mb-4">🎛 Sources</h2>
+          <div class="space-y-2">
+            <div class="source flex items-center gap-2 p-2 border rounded cursor-move bg-gray-100" draggable="true" data-src="endoscope.mp4">
+              <span class="text-lg">🔍</span> Endoscope
+            </div>
+            <div class="source flex items-center gap-2 p-2 border rounded cursor-move bg-gray-100" draggable="true" data-src="microscope.mp4">
+              <span class="text-lg">🔬</span> Microscope
+            </div>
+            <div class="source flex items-center gap-2 p-2 border rounded cursor-move bg-gray-100" draggable="true" data-src="or_overview.mp4">
+              <span class="text-lg">🎥</span> OR Overview
+            </div>
+            <div class="source flex items-center gap-2 p-2 border rounded cursor-move bg-gray-100" draggable="true" data-src="vital_signs.mp4">
+              <span class="text-lg">❤️</span> Vital Signs
+            </div>
+          </div>
+        </aside>
+
+        <!-- Display Zones -->
+        <main class="flex-1 p-6 overflow-y-auto">
+          
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold">🖥 Display Zones</h2>
+      <div class="relative inline-block text-left">
+        <button id="dropdownButton" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Session ▼
+        </button>
+        <div id="dropdownMenu" class="hidden absolute right-0 z-10 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+          <div class="py-1">
+            <button class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Start</button>
+            <button class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Pause</button>
+            <button class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100">Stop</button>
+          </div>
         </div>
       </div>
-    </aside>
-    <main class="flex-1 p-4 overflow-y-auto">
-      <h2 class="text-xl font-semibold mb-4">🖥 Display Zones</h2>
-      <div class="grid grid-cols-2 gap-4">
-        <div class="drop-zone w-full h-64 border-2 border-dashed rounded flex items-center justify-center text-gray-400 bg-white">Drop Source Here</div>
-        <div class="drop-zone w-full h-64 border-2 border-dashed rounded flex items-center justify-center text-gray-400 bg-white">Drop Source Here</div>
-        <div class="drop-zone w-full h-64 border-2 border-dashed rounded flex items-center justify-center text-gray-400 bg-white">Drop Source Here</div>
-        <div class="drop-zone w-full h-64 border-2 border-dashed rounded flex items-center justify-center text-gray-400 bg-white">Drop Source Here</div>
+    </div>
+    
+          <div class="grid grid-cols-2 gap-4">
+            <div class="drop-zone w-full h-64 border-2 border-dashed rounded flex items-center justify-center text-gray-400 bg-white">Drop Source Here</div>
+            <div class="drop-zone w-full h-64 border-2 border-dashed rounded flex items-center justify-center text-gray-400 bg-white">Drop Source Here</div>
+            <div class="drop-zone w-full h-64 border-2 border-dashed rounded flex items-center justify-center text-gray-400 bg-white">Drop Source Here</div>
+            <div class="drop-zone w-full h-64 border-2 border-dashed rounded flex items-center justify-center text-gray-400 bg-white">Drop Source Here</div>
+          </div>
+        </main>
       </div>
-    </main>
+
+      <!-- Archive Tab -->
+      <div id="tab-archive" class="tab-content hidden p-6">
+        <h2 class="text-xl font-semibold mb-4">Archived Procedures</h2>
+        <ul class="list-disc pl-5 text-gray-700">
+          <li>Case #001 – Laparoscopic Cholecystectomy</li>
+          <li>Case #002 – Endoscopic Sinus Surgery</li>
+          <li>Case #003 – Spine Decompression</li>
+        </ul>
+      </div>
+
+      <!-- Analytics Tab -->
+      <div id="tab-analytics" class="tab-content hidden p-6">
+        <h2 class="text-xl font-semibold mb-4">Viewer Analytics</h2>
+        <p class="text-gray-700">Coming soon: session duration, active viewers, video playback stats.</p>
+      </div>
+    </div>
   </div>
+
   <script src="main.js"></script>
+
+<!-- Side Drawer -->
+<div id="sideDrawer" class="fixed top-0 right-0 w-80 h-full bg-white shadow-lg transform translate-x-full transition-transform duration-300 z-50 overflow-y-auto">
+  <div class="p-4 border-b flex justify-between items-center">
+    <h3 class="text-lg font-semibold">📋 Patient Panel</h3>
+    <button id="closeDrawerBtn" class="text-gray-500 hover:text-red-600 text-xl">&times;</button>
+  </div>
+  <div class="p-4 space-y-6">
+    <section>
+      <h4 class="font-semibold text-gray-700 mb-2">🧑 Patient Info</h4>
+      <p><strong>Name:</strong> John Doe</p>
+      <p><strong>Age:</strong> 57</p>
+      <p><strong>Procedure:</strong> Endoscopic Sinus Surgery</p>
+    </section>
+    <section>
+      <h4 class="font-semibold text-gray-700 mb-2">💬 Live Chat</h4>
+      <textarea class="w-full h-24 p-2 border rounded text-sm" placeholder="Type message..."></textarea>
+      <button class="mt-2 bg-blue-600 text-white px-4 py-1 rounded text-sm hover:bg-blue-700">Send</button>
+    </section>
+    <section>
+      <h4 class="font-semibold text-gray-700 mb-2">🎛 Video Settings</h4>
+      <label class="block mb-2 text-sm">
+        Quality:
+        <select class="mt-1 block w-full border rounded p-1 text-sm">
+          <option>1080p</option>
+          <option>720p</option>
+          <option>480p</option>
+        </select>
+      </label>
+      <label class="block mb-2 text-sm">
+        Audio:
+        <select class="mt-1 block w-full border rounded p-1 text-sm">
+          <option>Mic 1</option>
+          <option>Mic 2</option>
+          <option>Off</option>
+        </select>
+      </label>
+    </section>
+  </div>
+</div>
+
+<!-- Drawer Toggle Button -->
+<button id="openDrawerBtn" class="fixed top-1/2 right-0 transform -translate-y-1/2 bg-blue-600 text-white px-2 py-1 rounded-l z-40 hover:bg-blue-700">
+  ☰ Panel
+</button>
 </body>
+
 </html>
