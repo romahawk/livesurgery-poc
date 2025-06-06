@@ -3,75 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Livesurgery PoC - Drag & Drop UI</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Livesurgery PoC - Tailwind UI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <div class="layout">
-    <aside class="sidebar">
-      <h2>🎛 Sources</h2>
-      <div class="source" draggable="true" data-src="endoscope.mp4">
-        <span class="source-icon">🔍</span> Endoscope
-      </div>
-      <div class="source" draggable="true" data-src="microscope.mp4">
-        <span class="source-icon">🔬</span> Microscope
-      </div>
-      <div class="source" draggable="true" data-src="or_overview.mp4">
-        <span class="source-icon">🎥</span> OR Camera
-      </div>
-      <div class="source" draggable="true" data-src="vital_signs.mp4">
-        <span class="source-icon">📊</span> Vitals Monitor
-      </div>
-      <div class="source" draggable="true" data-src="audio_feed.mp3">
-        <span class="source-icon">🎙️</span> Anesthesiologist Mic
+<body class="bg-gray-100 text-gray-900">
+  <div class="flex h-screen">
+    <aside class="w-1/4 bg-white p-4 border-r overflow-y-auto">
+      <h2 class="text-xl font-semibold mb-4">🎛 Sources</h2>
+      <div class="space-y-2">
+        <div class="source flex items-center gap-2 p-2 border rounded cursor-move bg-gray-100" draggable="true" data-src="endoscope.mp4">
+          <span class="text-lg">🔍</span> Endoscope
+        </div>
+        <div class="source flex items-center gap-2 p-2 border rounded cursor-move bg-gray-100" draggable="true" data-src="microscope.mp4">
+          <span class="text-lg">🔬</span> Microscope
+        </div>
+        <div class="source flex items-center gap-2 p-2 border rounded cursor-move bg-gray-100" draggable="true" data-src="or_overview.mp4">
+          <span class="text-lg">🎥</span> OR Overview
+        </div>
+        <div class="source flex items-center gap-2 p-2 border rounded cursor-move bg-gray-100" draggable="true" data-src="vital_signs.mp4">
+          <span class="text-lg">❤️</span> Vital Signs
+        </div>
       </div>
     </aside>
-
-    <main class="main-content">
-      <div class="session-setup" id="session-setup">
-        <label>
-          Surgeon:
-          <select id="surgeon-select">
-            <option>Dr. Alex Novak</option>
-            <option>Dr. Emily Park</option>
-            <option>Dr. Rafael Costa</option>
-          </select>
-        </label>
-        <label>
-          Procedure:
-          <select id="procedure-select">
-            <option>Laparoscopic Appendectomy</option>
-            <option>Microsurgical Anastomosis</option>
-            <option>Robotic Prostatectomy</option>
-          </select>
-        </label>
-        <button id="start-session">Start Session</button>
-      </div>
-
-      <div class="session-fixed" id="session-display" style="display: none;">
-        <strong>Surgeon:</strong> <span id="surgeon-name"></span> |
-        <strong>Procedure:</strong> <span id="procedure-name"></span> |
-        <strong>Session Time:</strong> <span id="session-timer">00:00</span>
-        <button id="pause-session">⏸</button>
-        <button id="stop-session">⏹</button>
-      </div>
-
-      <div class="drop-zone-container">
-        <div class="drop-zone-title">🖥️ Main Display</div>
-        <div id="main-drop" class="drop-zone">
-          <p>Drop a video here (main display)</p>
-        </div>
-      </div>
-
-      <div class="drop-zone-container">
-        <div class="drop-zone-title">🎞️ Active Feeds</div>
-        <div id="thumbnail-drop" class="drop-zone thumbnails">
-          <p>Drop additional feeds here (thumbnails)</p>
-        </div>
+    <main class="flex-1 p-4 overflow-y-auto">
+      <h2 class="text-xl font-semibold mb-4">🖥 Display Zones</h2>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="drop-zone w-full h-64 border-2 border-dashed rounded flex items-center justify-center text-gray-400 bg-white">Drop Source Here</div>
+        <div class="drop-zone w-full h-64 border-2 border-dashed rounded flex items-center justify-center text-gray-400 bg-white">Drop Source Here</div>
+        <div class="drop-zone w-full h-64 border-2 border-dashed rounded flex items-center justify-center text-gray-400 bg-white">Drop Source Here</div>
+        <div class="drop-zone w-full h-64 border-2 border-dashed rounded flex items-center justify-center text-gray-400 bg-white">Drop Source Here</div>
       </div>
     </main>
   </div>
-
-  <script src="main.js" defer></script>
+  <script src="main.js"></script>
 </body>
 </html>
