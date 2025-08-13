@@ -12,14 +12,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Tabs
   const buttons = document.querySelectorAll(".tab-button");
   const tabs = document.querySelectorAll(".tab-content");
-  const analyticsTab = [...tabs].find(tab => tab.getAttribute("href")?.toLowerCase().includes("analytics"));
-  if (role === "viewer" && analyticsTab) {
-    analyticsTab.classList.add("hidden");
-  } else {
-      analyticsTabBtn?.classList.remove("hidden");
-    analyticsTab?.classList.remove("hidden");
-  }
-
   buttons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const target = btn.dataset.tab;
@@ -90,8 +82,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const roleSelector = document.getElementById("user-role");
 
   const updateRoleUI = () => {
-    const analyticsTabBtn = document.querySelector('button[data-tab="analytics"]');
-
     const sessionDropdown = document.getElementById("dropdownButton")?.parentElement;
 
     const role = roleSelector.value;
@@ -100,13 +90,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const panelBtn = document.getElementById("openDrawerBtn");
 
     if (role === "viewer") {
-      analyticsTabBtn?.classList.add("hidden");
       sessionDropdown?.classList.add("hidden");
       sessionControls?.classList.add("hidden");
       sources?.classList.add("pointer-events-none", "opacity-50");
       panelBtn?.classList.remove("hidden");
     } else {
-      analyticsTabBtn?.classList.remove("hidden");
       sessionDropdown?.classList.remove("hidden");
       sessionControls?.classList.remove("hidden");
       sources?.classList.remove("pointer-events-none", "opacity-50");
@@ -120,4 +108,75 @@ document.addEventListener("DOMContentLoaded", () => {
 
   roleSelector?.addEventListener("change", updateRoleUI);
   updateRoleUI(); // initial run
+});
+
+
+  const tabs = document.querySelectorAll('nav a');
+  tabs.forEach(tab => {
+    const href = tab.getAttribute('href');
+    if (role === "viewer" && (href.includes("Archive") || href.includes("Analytics"))) {
+      tab.classList.add("hidden");
+    } else {
+      tab.classList.remove("hidden");
+    }
+  });
+
+
+  const analyticsTab = [...tabs].find(tab => tab.textContent.trim() === "Analytics");
+  if (role === "viewer" && analyticsTab) {
+    analyticsTab.classList.add("hidden");
+  }
+
+
+function updateRoleUI() {
+  const role = document.getElementById("user-role")?.value;
+
+  const sessionControls = document.getElementById("live-session-controls");
+  const sources = document.querySelector("aside");
+  const sessionDropdown = document.getElementById("dropdownButton")?.parentElement;
+  const archiveTabBtn = document.querySelector('button[data-tab="archive"]');
+  const analyticsTabBtn = document.querySelector('button[data-tab="analytics"]');
+  const drawerBtn = document.getElementById("openDrawerBtn");
+
+  const readonlyInfo = document.getElementById("readonly-patient-info");
+  const editableForm = document.getElementById("editable-patient-form");
+
+  if (role === "viewer") {
+    sessionControls?.classList.add("hidden");
+    sources?.classList.add("pointer-events-none", "opacity-50");
+    sessionDropdown?.classList.add("hidden");
+    archiveTabBtn?.classList.add("hidden");
+    analyticsTabBtn?.classList.add("hidden");
+    drawerBtn?.classList.remove("hidden");
+
+    readonlyInfo?.classList.remove("hidden");
+    editableForm?.classList.add("hidden");
+  } else {
+    sessionControls?.classList.remove("hidden");
+    sources?.classList.remove("pointer-events-none", "opacity-50");
+    sessionDropdown?.classList.remove("hidden");
+    archiveTabBtn?.classList.remove("hidden");
+    analyticsTabBtn?.classList.remove("hidden");
+    drawerBtn?.classList.remove("hidden");
+
+    readonlyInfo?.classList.add("hidden");
+    editableForm?.classList.remove("hidden");
+  }
+}
+
+document.getElementById("user-role")?.addEventListener("change", updateRoleUI);
+updateRoleUI();
+
+// Handle patient form submission
+document.getElementById("editable-patient-form")?.addEventListener("submit", function (e) {
+  e.preventDefault();
+  const name = document.getElementById("patient-name")?.value || "John Doe";
+  const age = document.getElementById("patient-age")?.value || "57";
+  const procedure = document.getElementById("patient-procedure")?.value || "Endoscopic Sinus Surgery";
+
+  document.getElementById("patient-name-display").textContent = name;
+  document.getElementById("patient-age-display").textContent = age;
+  document.getElementById("patient-procedure-display").textContent = procedure;
+
+  // Optionally switch back to read-only after save
 });
