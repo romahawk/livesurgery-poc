@@ -12,6 +12,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // Tabs
   const buttons = document.querySelectorAll(".tab-button");
   const tabs = document.querySelectorAll(".tab-content");
+  const analyticsTab = [...tabs].find(tab => tab.getAttribute("href")?.toLowerCase().includes("analytics"));
+  if (role === "viewer" && analyticsTab) {
+    analyticsTab.classList.add("hidden");
+  } else {
+      analyticsTabBtn?.classList.remove("hidden");
+    analyticsTab?.classList.remove("hidden");
+  }
+
   buttons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const target = btn.dataset.tab;
@@ -75,4 +83,41 @@ document.addEventListener("DOMContentLoaded", () => {
       drawer.classList.add("translate-x-full");
     });
   }
+});
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  const roleSelector = document.getElementById("user-role");
+
+  const updateRoleUI = () => {
+    const analyticsTabBtn = document.querySelector('button[data-tab="analytics"]');
+
+    const sessionDropdown = document.getElementById("dropdownButton")?.parentElement;
+
+    const role = roleSelector.value;
+    const sessionControls = document.getElementById("live-session-controls");
+    const sources = document.querySelector("aside");
+    const panelBtn = document.getElementById("openDrawerBtn");
+
+    if (role === "viewer") {
+      analyticsTabBtn?.classList.add("hidden");
+      sessionDropdown?.classList.add("hidden");
+      sessionControls?.classList.add("hidden");
+      sources?.classList.add("pointer-events-none", "opacity-50");
+      panelBtn?.classList.remove("hidden");
+    } else {
+      analyticsTabBtn?.classList.remove("hidden");
+      sessionDropdown?.classList.remove("hidden");
+      sessionControls?.classList.remove("hidden");
+      sources?.classList.remove("pointer-events-none", "opacity-50");
+      panelBtn?.classList.remove("hidden");
+    }
+
+    if (role === "admin") {
+      console.log("🛠 Admin mode active");
+    }
+  };
+
+  roleSelector?.addEventListener("change", updateRoleUI);
+  updateRoleUI(); // initial run
 });

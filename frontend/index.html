@@ -44,7 +44,17 @@
           
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-xl font-semibold">🖥 Display Zones</h2>
-      <div class="relative inline-block text-left">
+      
+<div class="inline-flex items-center space-x-2 ml-4">
+  <label for="user-role" class="text-sm font-medium text-[#131313]">Role:</label>
+  <select id="user-role" class="border border-gray-300 rounded px-2 py-1 text-sm">
+    <option value="surgeon">Surgeon</option>
+    <option value="viewer">Viewer</option>
+    <option value="admin">Admin</option>
+  </select>
+</div>
+
+<div class="relative inline-block text-left">
         <button id="dropdownButton" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
           Session ▼
         </button>
