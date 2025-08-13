@@ -1,5 +1,8 @@
 import { useState } from "react";
 import Navbar from "./components/Navbar";
+import Sidebar from "./components/Sidebar";
+import SessionControls from "./components/SessionControls";
+import DisplayGrid from "./components/DisplayGrid";
 
 export default function App() {
   const [role, setRole] = useState("surgeon");
@@ -16,13 +19,18 @@ export default function App() {
 
       <main className="flex-1 w-full flex px-4 py-6">
         {/* Sidebar */}
-        <div className="w-64 bg-gray-200 p-4 rounded">Sidebar goes here</div>
+        <Sidebar role={role} />
 
-        {/* Display Area */}
+        {/* Main content area */}
         <div className="flex-1 bg-white ml-4 p-4 rounded shadow">
-          {currentTab === "Live" && <div>🔴 Live content goes here</div>}
-          {currentTab === "Archive" && <div>📁 Archive content goes here</div>}
-          {currentTab === "Analytics" && <div>📊 Analytics content goes here</div>}
+          {currentTab === "Live" && (
+            <>
+              <SessionControls role={role} />
+              <DisplayGrid />
+            </>
+          )}
+          {currentTab === "Archive" && <div>📁 Archive content</div>}
+          {currentTab === "Analytics" && <div>📊 Analytics content</div>}
         </div>
       </main>
     </div>
