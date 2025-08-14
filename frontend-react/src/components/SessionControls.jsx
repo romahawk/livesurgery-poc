@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-export default function SessionControls({ onStart, onPause, onStop, status }) {
+export default function SessionControls({ onStart, onPause, onStop, status, onTogglePatientInfo }) {
   const [timer, setTimer] = useState(0);
   const [intervalId, setIntervalId] = useState(null);
 
@@ -22,11 +22,12 @@ export default function SessionControls({ onStart, onPause, onStop, status }) {
 
   return (
     <div className="p-4 bg-white rounded shadow mb-4">
-      <div className="flex items-center justify-between mb-2">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="text-sm">
           <strong>Session Time:</strong> <span>{formatTime(timer)}</span>
         </div>
-        <div className="flex gap-2">
+
+        <div className="flex flex-wrap gap-2 justify-end">
           <button
             className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
             onClick={onStart}
@@ -49,6 +50,12 @@ export default function SessionControls({ onStart, onPause, onStop, status }) {
             }}
           >
             Stop
+          </button>
+          <button
+            onClick={onTogglePatientInfo}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+          >
+            Patient Info
           </button>
         </div>
       </div>
