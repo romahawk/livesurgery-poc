@@ -5,6 +5,7 @@ import DisplayGrid from "./components/DisplayGrid";
 import SessionControls from "./components/SessionControls";
 import PatientInfoPanel from "./components/PatientInfoPanel";
 import LiveChatPanel from "./components/LiveChatPanel";
+import ArchiveTab from "./components/ArchiveTab";
 
 export default function App() {
   const [role, setRole] = useState("surgeon");
@@ -19,6 +20,22 @@ export default function App() {
   });
   const [sessionStatus, setSessionStatus] = useState("idle");
   const [chatMessages, setChatMessages] = useState([]);
+  const [archiveSessions, setArchiveSessions] = useState([
+    {
+      id: 1,
+      surgeon: "Dr. Ivanov",
+      procedure: "Laparoscopic Cholecystectomy",
+      date: "2025-08-10",
+      duration: "01:45:00"
+    },
+    {
+      id: 2,
+      surgeon: "Dr. Müller",
+      procedure: "Neurosurgical Debridement",
+      date: "2025-08-09",
+      duration: "02:15:00"
+    }
+  ]);
 
   const handleStart = () => setSessionStatus("running");
   const handlePause = () => setSessionStatus("paused");
@@ -69,7 +86,7 @@ export default function App() {
               <DisplayGrid />
             </>
           )}
-          {currentTab === "Archive" && <div>📁 Archive content</div>}
+          {currentTab === "Archive" && <ArchiveTab sessions={archiveSessions} />}
           {currentTab === "Analytics" && <div>📊 Analytics content</div>}
         </div>
 
