@@ -3,7 +3,7 @@ export default function Sidebar({ role }) {
     { id: "endoscope", label: "🔍 Endoscope", src: "endoscope.mp4" },
     { id: "microscope", label: "🔬 Microscope", src: "microscope.mp4" },
     { id: "ptz", label: "📹 PTZ Camera", src: "ptz.mp4" },
-    { id: "monitor", label: "🖥️ Monitor Capture", src: "monitor.mp4" },
+    { id: "monitor", label: "🖥️ Monitor Capture", src: "vital_signs.mp4" },
   ];
 
   return (
