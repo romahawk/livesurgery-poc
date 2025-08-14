@@ -4,11 +4,13 @@ import Sidebar from "./components/Sidebar";
 import DisplayGrid from "./components/DisplayGrid";
 import SessionControls from "./components/SessionControls";
 import PatientInfoPanel from "./components/PatientInfoPanel";
+import LiveChatPanel from "./components/LiveChatPanel";
 
 export default function App() {
   const [role, setRole] = useState("surgeon");
   const [currentTab, setCurrentTab] = useState("Live");
   const [showPatientInfoPanel, setShowPatientInfoPanel] = useState(false);
+  const [showChatPanel, setShowChatPanel] = useState(false);
   const [patientInfo, setPatientInfo] = useState({
     name: "",
     id: "",
@@ -16,10 +18,16 @@ export default function App() {
     notes: ""
   });
   const [sessionStatus, setSessionStatus] = useState("idle");
+  const [chatMessages, setChatMessages] = useState([]);
 
   const handleStart = () => setSessionStatus("running");
   const handlePause = () => setSessionStatus("paused");
   const handleStop = () => setSessionStatus("stopped");
+
+  const handleSendMessage = (text) => {
+    const newMsg = { sender: role, text };
+    setChatMessages((prev) => [...prev, newMsg]);
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -44,6 +52,20 @@ export default function App() {
                 status={sessionStatus}
                 onTogglePatientInfo={() => setShowPatientInfoPanel(!showPatientInfoPanel)}
               />
+              <div className="flex justify-end gap-2 mb-2">
+                <button
+                  className="bg-blue-500 text-white px-3 py-1 rounded"
+                  onClick={() => setShowPatientInfoPanel(true)}
+                >
+                  Patient Info
+                </button>
+                <button
+                  className="bg-indigo-500 text-white px-3 py-1 rounded"
+                  onClick={() => setShowChatPanel(true)}
+                >
+                  Live Chat
+                </button>
+              </div>
               <DisplayGrid />
             </>
           )}
@@ -57,6 +79,15 @@ export default function App() {
             patientInfo={patientInfo}
             onUpdate={setPatientInfo}
             onClose={() => setShowPatientInfoPanel(false)}
+          />
+        )}
+
+        {showChatPanel && (
+          <LiveChatPanel
+            role={role}
+            messages={chatMessages}
+            onSendMessage={handleSendMessage}
+            onClose={() => setShowChatPanel(false)}
           />
         )}
       </main>

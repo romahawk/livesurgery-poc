@@ -51,12 +51,6 @@ export default function SessionControls({ onStart, onPause, onStop, status, onTo
           >
             Stop
           </button>
-          <button
-            onClick={onTogglePatientInfo}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
-          >
-            Patient Info
-          </button>
         </div>
       </div>
     </div>
