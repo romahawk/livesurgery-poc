@@ -1,11 +1,5 @@
 import React, { useState } from "react";
-
-const sources = [
-  { id: "endoscope", label: "🔍 Endoscope", src: "endoscope.mp4" },
-  { id: "microscope", label: "🔬 Microscope", src: "microscope.mp4" },
-  { id: "ptz", label: "📹 PTZ Camera", src: "ptz.mp4" },
-  { id: "monitor", label: "🖥️ Monitor Capture", src: "vital_signs.mp4" },
-];
+import { LayoutDashboard, X } from "lucide-react";
 
 export default function DisplayGrid() {
   const [gridSources, setGridSources] = useState([null, null, null, null]);
@@ -13,6 +7,7 @@ export default function DisplayGrid() {
   const handleDrop = (index, e) => {
     e.preventDefault();
     const droppedSrc = e.dataTransfer.getData("text/plain");
+    if (!droppedSrc) return;
     setGridSources((prev) => {
       const updated = [...prev];
       updated[index] = droppedSrc;
@@ -20,9 +15,7 @@ export default function DisplayGrid() {
     });
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
+  const handleDragOver = (e) => e.preventDefault();
 
   const handleRemove = (index) => {
     setGridSources((prev) => {
@@ -37,16 +30,19 @@ export default function DisplayGrid() {
       <video
         key={src}
         src={`videos/${src}`}
-        className="w-full h-full object-contain rounded"
+        className="w-full h-full object-contain rounded-xl"
         controls
         autoPlay
         loop
       />
       <button
         onClick={() => handleRemove(index)}
-        className="absolute top-1 right-1 bg-white rounded px-2 py-1 text-xs text-red-500 border hover:bg-red-100"
+        className="absolute top-2 right-2 inline-flex items-center gap-1 bg-white/95 backdrop-blur rounded-md px-2 py-1 text-xs text-red-600 border hover:bg-red-50"
+        aria-label="Remove source"
+        title="Remove"
       >
-        ✕ Remove
+        <X className="h-3.5 w-3.5" />
+        Remove
       </button>
     </div>
   );
@@ -58,10 +54,15 @@ export default function DisplayGrid() {
           key={index}
           onDrop={(e) => handleDrop(index, e)}
           onDragOver={handleDragOver}
-          className="border-2 border-dashed border-gray-400 rounded h-64 flex items-center justify-center bg-white relative"
+          className="rounded-xl h-64 flex items-center justify-center bg-white relative border-2 border-dashed border-gray-300"
         >
-          {src ? renderVideo(src, index) : (
-            <span className="text-gray-400">Drop Source Here</span>
+          {src ? (
+            renderVideo(src, index)
+          ) : (
+            <div className="flex flex-col items-center text-gray-400">
+              <LayoutDashboard className="h-6 w-6 mb-1" aria-hidden />
+              <span>Drop Source Here</span>
+            </div>
           )}
         </div>
       ))}

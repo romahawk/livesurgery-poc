@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect } from "react";
+import { MessageSquareMore, X, SendHorizontal } from "lucide-react";
 
 export default function LiveChatPanel({ role, messages, onSendMessage, onClose }) {
   const [input, setInput] = useState("");
   const chatRef = useRef(null);
 
   useEffect(() => {
-    if (chatRef.current) {
-      chatRef.current.scrollTop = chatRef.current.scrollHeight;
-    }
+    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [messages]);
 
   const handleSubmit = (e) => {
@@ -20,8 +19,18 @@ export default function LiveChatPanel({ role, messages, onSendMessage, onClose }
   return (
     <div className="fixed top-0 right-0 w-80 h-full bg-white shadow-lg p-4 border-l z-50">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">💬 Live Chat</h2>
-        <button onClick={onClose} className="text-gray-500 hover:text-red-500 text-xl">&times;</button>
+        <h2 className="text-lg font-semibold inline-flex items-center gap-2">
+          <MessageSquareMore className="h-5 w-5" aria-hidden />
+          <span>Live Chat</span>
+        </h2>
+        <button
+          onClick={onClose}
+          className="text-gray-500 hover:text-red-500"
+          aria-label="Close chat panel"
+          title="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       <div ref={chatRef} className="overflow-y-auto h-[70%] space-y-2 pr-1">
@@ -49,8 +58,10 @@ export default function LiveChatPanel({ role, messages, onSendMessage, onClose }
           />
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+            aria-label="Send message"
           >
+            <SendHorizontal className="h-4 w-4" />
             Send
           </button>
         </form>

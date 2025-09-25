@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { User, X } from "lucide-react";
 
 export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose }) {
   const [localInfo, setLocalInfo] = useState(patientInfo);
@@ -16,14 +17,23 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
   return (
     <div className="fixed top-0 right-0 w-80 h-full bg-white shadow-lg p-4 border-l z-50">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">🧑‍⚕️ Patient Info</h2>
-        <button onClick={onClose} className="text-gray-500 hover:text-red-500 text-xl">&times;</button>
+        <h2 className="text-lg font-semibold inline-flex items-center gap-2">
+          <User className="h-5 w-5" aria-hidden />
+          <span>Patient Info</span>
+        </h2>
+        <button
+          onClick={onClose}
+          className="text-gray-500 hover:text-red-500"
+          aria-label="Close patient info"
+          title="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       {role === "surgeon" ? (
         <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium">Name</label>
+          <Field label="Name">
             <input
               type="text"
               name="name"
@@ -31,9 +41,9 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
               onChange={handleChange}
               className="w-full border px-2 py-1 rounded"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Patient ID</label>
+          </Field>
+
+          <Field label="Patient ID">
             <input
               type="text"
               name="id"
@@ -41,9 +51,9 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
               onChange={handleChange}
               className="w-full border px-2 py-1 rounded"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Age</label>
+          </Field>
+
+          <Field label="Age">
             <input
               type="number"
               name="age"
@@ -51,9 +61,9 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
               onChange={handleChange}
               className="w-full border px-2 py-1 rounded"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Notes</label>
+          </Field>
+
+          <Field label="Notes">
             <textarea
               name="notes"
               value={localInfo.notes}
@@ -61,12 +71,12 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
               className="w-full border px-2 py-1 rounded"
               rows={3}
             />
-          </div>
+          </Field>
 
           <div className="flex justify-end">
             <button
               onClick={handleSave}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded"
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded"
             >
               Save
             </button>
@@ -80,6 +90,15 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
           <p><strong>Notes:</strong> {patientInfo.notes}</p>
         </div>
       )}
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      {children}
     </div>
   );
 }

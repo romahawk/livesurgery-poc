@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Clock4, Play, Pause, Square } from "lucide-react";
 
 export default function SessionControls({ onStart, onPause, onStop, status, onTogglePatientInfo }) {
   const [timer, setTimer] = useState(0);
@@ -12,7 +13,7 @@ export default function SessionControls({ onStart, onPause, onStop, status, onTo
       clearInterval(intervalId);
     }
     return () => clearInterval(intervalId);
-  }, [status]);
+  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -21,34 +22,41 @@ export default function SessionControls({ onStart, onPause, onStop, status, onTo
   };
 
   return (
-    <div className="p-4 bg-white rounded shadow mb-4">
+    <div className="p-4 bg-white rounded-xl border mb-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="text-sm">
-          <strong>Session Time:</strong> <span>{formatTime(timer)}</span>
+        <div className="text-sm inline-flex items-center gap-2">
+          <Clock4 className="h-4 w-4" aria-hidden />
+          <strong>Session Time:</strong>
+          <span>{formatTime(timer)}</span>
         </div>
 
         <div className="flex flex-wrap gap-2 justify-end">
           <button
-            className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+            className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
             onClick={onStart}
             disabled={status === "running"}
           >
+            <Play className="h-4 w-4" />
             Start
           </button>
+
           <button
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
+            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded"
             onClick={onPause}
             disabled={status !== "running"}
           >
+            <Pause className="h-4 w-4" />
             Pause
           </button>
+
           <button
-            className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+            className="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded"
             onClick={() => {
               onStop();
               setTimer(0);
             }}
           >
+            <Square className="h-4 w-4" />
             Stop
           </button>
         </div>
