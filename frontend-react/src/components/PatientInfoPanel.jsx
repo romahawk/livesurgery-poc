@@ -1,6 +1,21 @@
 import { useState } from "react";
 import { User, X } from "lucide-react";
 
+/** Small trigger button with icon (use in your toolbar/top-right) */
+export function PatientInfoButton({ onClick, className = "" }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded ${className}`}
+      aria-label="Open patient info"
+      title="Patient Info"
+    >
+      <User className="h-4 w-4" aria-hidden />
+      Patient Info
+    </button>
+  );
+}
+
 export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose }) {
   const [localInfo, setLocalInfo] = useState(patientInfo);
 
@@ -11,11 +26,12 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
 
   const handleSave = () => {
     onUpdate(localInfo);
-    onClose();
+    onClose?.();
   };
 
   return (
     <div className="fixed top-0 right-0 w-80 h-full bg-white shadow-lg p-4 border-l z-50">
+      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold inline-flex items-center gap-2">
           <User className="h-5 w-5" aria-hidden />
@@ -31,6 +47,7 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
         </button>
       </div>
 
+      {/* Content */}
       {role === "surgeon" ? (
         <div className="space-y-3">
           <Field label="Name">

@@ -3,38 +3,43 @@ import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import DisplayGrid from "./components/DisplayGrid";
 import SessionControls from "./components/SessionControls";
-import PatientInfoPanel from "./components/PatientInfoPanel";
-import LiveChatPanel from "./components/LiveChatPanel";
+import PatientInfoPanel, { PatientInfoButton } from "./components/PatientInfoPanel";
+import LiveChatPanel, { LiveChatButton } from "./components/LiveChatPanel";
 import ArchiveTab from "./components/ArchiveTab";
+import AnalyticsTab from "./components/AnalyticsTab";
 
 export default function App() {
   const [role, setRole] = useState("surgeon");
   const [currentTab, setCurrentTab] = useState("Live");
+
   const [showPatientInfoPanel, setShowPatientInfoPanel] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
+
   const [patientInfo, setPatientInfo] = useState({
     name: "",
     id: "",
     age: "",
-    notes: ""
+    notes: "",
   });
+
   const [sessionStatus, setSessionStatus] = useState("idle");
   const [chatMessages, setChatMessages] = useState([]);
-  const [archiveSessions, setArchiveSessions] = useState([
+
+  const [archiveSessions] = useState([
     {
       id: 1,
       surgeon: "Dr. Ivanov",
       procedure: "Laparoscopic Cholecystectomy",
       date: "2025-08-10",
-      duration: "01:45:00"
+      duration: "01:45:00",
     },
     {
       id: 2,
       surgeon: "Dr. Müller",
       procedure: "Neurosurgical Debridement",
       date: "2025-08-09",
-      duration: "02:15:00"
-    }
+      duration: "02:15:00",
+    },
   ]);
 
   const handleStart = () => setSessionStatus("running");
@@ -62,32 +67,23 @@ export default function App() {
           {currentTab === "Live" && (
             <>
               <SessionControls
-                role={role}
                 onStart={handleStart}
                 onPause={handlePause}
                 onStop={handleStop}
                 status={sessionStatus}
-                onTogglePatientInfo={() => setShowPatientInfoPanel(!showPatientInfoPanel)}
               />
+
               <div className="flex justify-end gap-2 mb-2">
-                <button
-                  className="bg-blue-500 text-white px-3 py-1 rounded"
-                  onClick={() => setShowPatientInfoPanel(true)}
-                >
-                  Patient Info
-                </button>
-                <button
-                  className="bg-indigo-500 text-white px-3 py-1 rounded"
-                  onClick={() => setShowChatPanel(true)}
-                >
-                  Live Chat
-                </button>
+                <PatientInfoButton onClick={() => setShowPatientInfoPanel(true)} />
+                <LiveChatButton onClick={() => setShowChatPanel(true)} />
               </div>
+
               <DisplayGrid />
             </>
           )}
+
           {currentTab === "Archive" && <ArchiveTab sessions={archiveSessions} />}
-          {currentTab === "Analytics" && <div>📊 Analytics content</div>}
+          {currentTab === "Analytics" && <AnalyticsTab />}
         </div>
 
         {showPatientInfoPanel && (

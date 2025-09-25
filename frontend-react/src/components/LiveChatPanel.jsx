@@ -1,5 +1,20 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageSquareMore, X, SendHorizontal } from "lucide-react";
+import { MessageSquare, X, SendHorizontal } from "lucide-react";
+
+/** Small trigger button with icon (use in your toolbar/top-right) */
+export function LiveChatButton({ onClick, className = "" }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded ${className}`}
+      aria-label="Open live chat"
+      title="Live Chat"
+    >
+      <MessageSquare className="h-4 w-4" aria-hidden />
+      Live Chat
+    </button>
+  );
+}
 
 export default function LiveChatPanel({ role, messages, onSendMessage, onClose }) {
   const [input, setInput] = useState("");
@@ -18,9 +33,10 @@ export default function LiveChatPanel({ role, messages, onSendMessage, onClose }
 
   return (
     <div className="fixed top-0 right-0 w-80 h-full bg-white shadow-lg p-4 border-l z-50">
+      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold inline-flex items-center gap-2">
-          <MessageSquareMore className="h-5 w-5" aria-hidden />
+          <MessageSquare className="h-5 w-5" aria-hidden />
           <span>Live Chat</span>
         </h2>
         <button
@@ -33,6 +49,7 @@ export default function LiveChatPanel({ role, messages, onSendMessage, onClose }
         </button>
       </div>
 
+      {/* Messages */}
       <div ref={chatRef} className="overflow-y-auto h-[70%] space-y-2 pr-1">
         {messages.map((msg, idx) => (
           <div
@@ -47,6 +64,7 @@ export default function LiveChatPanel({ role, messages, onSendMessage, onClose }
         ))}
       </div>
 
+      {/* Input */}
       {role !== "viewer" && (
         <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
           <input
