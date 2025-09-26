@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Clock4, Play, Pause, Square } from "lucide-react";
 
-export default function SessionControls({ onStart, onPause, onStop, status, onTogglePatientInfo }) {
+export default function SessionControls({ onStart, onPause, onStop, status }) {
   const [timer, setTimer] = useState(0);
   const [intervalId, setIntervalId] = useState(null);
 
@@ -21,6 +21,10 @@ export default function SessionControls({ onStart, onPause, onStop, status, onTo
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const btnBase =
+    "inline-flex items-center gap-2 px-3 py-1 rounded shadow-sm text-white " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]";
+
   return (
     <div className="p-4 bg-white rounded-xl border mb-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -32,7 +36,7 @@ export default function SessionControls({ onStart, onPause, onStop, status, onTo
 
         <div className="flex flex-wrap gap-2 justify-end">
           <button
-            className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
+            className={`${btnBase} bg-green-600 hover:bg-green-700`}
             onClick={onStart}
             disabled={status === "running"}
           >
@@ -41,7 +45,7 @@ export default function SessionControls({ onStart, onPause, onStop, status, onTo
           </button>
 
           <button
-            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded"
+            className={`${btnBase} bg-amber-500 hover:bg-amber-600`}
             onClick={onPause}
             disabled={status !== "running"}
           >
@@ -50,7 +54,7 @@ export default function SessionControls({ onStart, onPause, onStop, status, onTo
           </button>
 
           <button
-            className="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded"
+            className={`${btnBase} bg-rose-600 hover:bg-rose-700`}
             onClick={() => {
               onStop();
               setTimer(0);

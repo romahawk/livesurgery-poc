@@ -5,13 +5,15 @@ export function PatientInfoButton({ onClick, className = "", hasUnsaved = false 
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${className}`}
+      className={`inline-flex items-center gap-2 px-3 py-1 rounded text-white shadow-sm
+                  bg-[#15B8A6] hover:bg-[#12a291] focus-visible:outline-none
+                  focus-visible:ring-2 focus-visible:ring-[#15B8A6] ${className}`}
       aria-label="Open patient info"
       title="Patient Info (I)"
     >
       <User className="h-4 w-4" aria-hidden />
       Patient Info
-      {hasUnsaved && <span className="ml-2 h-2 w-2 rounded-full bg-white/70" />}
+      {hasUnsaved && <span className="ml-2 h-2 w-2 rounded-full bg-white/80" title="Unsaved" />}
     </button>
   );
 }
@@ -42,13 +44,13 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
     <div role="dialog" aria-modal="true" className="fixed top-0 right-0 w-80 h-full bg-white shadow-lg p-4 border-l z-50">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold inline-flex items-center gap-2">
-          <User className="h-5 w-5" aria-hidden />
+          <User className="h-5 w-5 text-[#15B8A6]" aria-hidden />
           <span>Patient Info</span>
           {dirty && <span className="ml-2 h-2 w-2 rounded-full bg-amber-400" title="Unsaved changes" />}
         </h2>
         <button
           onClick={() => (dirty && !confirm("Discard unsaved changes?")) ? null : onClose?.()}
-          className="text-gray-500 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 rounded"
+          className="text-slate-500 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6] rounded"
           aria-label="Close patient info (Esc)"
           title="Close (Esc)"
         >
@@ -64,7 +66,7 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
               name="name"
               value={localInfo.name}
               onChange={handleChange}
-              className="w-full border px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+              className="w-full border px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
             />
           </Field>
 
@@ -74,7 +76,7 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
               name="id"
               value={localInfo.id}
               onChange={handleChange}
-              className="w-full border px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+              className="w-full border px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
             />
           </Field>
 
@@ -84,7 +86,7 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
               name="age"
               value={localInfo.age}
               onChange={handleChange}
-              className="w-full border px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+              className="w-full border px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
             />
           </Field>
 
@@ -93,7 +95,7 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
               name="notes"
               value={localInfo.notes}
               onChange={handleChange}
-              className="w-full border px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+              className="w-full border px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
               rows={3}
             />
           </Field>
@@ -101,7 +103,9 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
           <div className="flex justify-end">
             <button
               onClick={handleSave}
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+              className="inline-flex items-center gap-2 px-4 py-1 rounded text-white shadow-sm
+                         bg-[#15B8A6] hover:bg-[#12a291] focus-visible:outline-none
+                         focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
             >
               Save
             </button>

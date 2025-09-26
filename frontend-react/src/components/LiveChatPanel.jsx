@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { MessageSquare, X, SendHorizontal } from "lucide-react";
 
-/** Small trigger button with icon (use in your toolbar/top-right) */
+/** Small trigger button (now in brand teal) */
 export function LiveChatButton({ onClick, className = "" }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded ${className}`}
+      className={`inline-flex items-center gap-2 px-3 py-1 rounded text-white shadow-sm
+                  bg-[#15B8A6] hover:bg-[#12a291] focus-visible:outline-none
+                  focus-visible:ring-2 focus-visible:ring-[#15B8A6] ${className}`}
       aria-label="Open live chat"
       title="Live Chat"
     >
@@ -36,12 +38,12 @@ export default function LiveChatPanel({ role, messages, onSendMessage, onClose }
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold inline-flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" aria-hidden />
+          <MessageSquare className="h-5 w-5 text-[#15B8A6]" aria-hidden />
           <span>Live Chat</span>
         </h2>
         <button
           onClick={onClose}
-          className="text-gray-500 hover:text-red-500"
+          className="text-slate-500 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6] rounded"
           aria-label="Close chat panel"
           title="Close"
         >
@@ -51,17 +53,23 @@ export default function LiveChatPanel({ role, messages, onSendMessage, onClose }
 
       {/* Messages */}
       <div ref={chatRef} className="overflow-y-auto h-[70%] space-y-2 pr-1">
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`p-2 rounded ${
-              msg.sender === role ? "bg-blue-100 self-end" : "bg-gray-100"
-            }`}
-          >
-            <strong className="block text-xs text-gray-600">{msg.sender}</strong>
-            <span className="text-sm">{msg.text}</span>
-          </div>
-        ))}
+        {messages.map((msg, idx) => {
+          const mine = msg.sender === role;
+          return (
+            <div
+              key={idx}
+              className={[
+                "p-2 rounded border",
+                mine
+                  ? "bg-[#CFF4EC] border-[#15B8A6]/30"
+                  : "bg-slate-100 border-slate-200",
+              ].join(" ")}
+            >
+              <strong className="block text-[11px] text-slate-600">{msg.sender}</strong>
+              <span className="text-sm">{msg.text}</span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Input */}
@@ -69,14 +77,16 @@ export default function LiveChatPanel({ role, messages, onSendMessage, onClose }
         <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
           <input
             type="text"
-            className="flex-1 border rounded px-2 py-1"
+            className="flex-1 border rounded px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
             placeholder="Type a message..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
           />
           <button
             type="submit"
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+            className="inline-flex items-center gap-2 px-3 py-1 rounded text-white shadow-sm
+                       bg-[#15B8A6] hover:bg-[#12a291] focus-visible:outline-none
+                       focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
             aria-label="Send message"
           >
             <SendHorizontal className="h-4 w-4" />

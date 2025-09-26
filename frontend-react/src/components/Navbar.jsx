@@ -6,12 +6,13 @@ import {
   TvMinimalPlay,
   CircleDot,
   Sun,
-  Moon
+  Moon,
 } from "lucide-react";
 
-/** Brand logo with Lucide icon in Clinical Trust palette */
+/** Brand logo (Clinical Trust palette: teal/mint/navy) */
 function BrandLogo({ size = 40 }) {
   const iconSize = Math.round(size * 0.62);
+
   return (
     <a className="inline-flex items-center gap-2 select-none" href="/" aria-label="LiveSurgery">
       <span
@@ -20,22 +21,18 @@ function BrandLogo({ size = 40 }) {
         style={{
           width: size,
           height: size,
-          background: "#CFF4EC", // mint
-          borderColor: "#15B8A6" // teal
+          background: "var(--ls-mint, #CFF4EC)",
+          borderColor: "var(--ls-teal, #15B8A6)",
         }}
       >
-        <TvMinimalPlay
-          size={iconSize}
-          strokeWidth={2.5}
-          style={{ color: "#15B8A6" }} // teal
-        />
+        <TvMinimalPlay size={iconSize} strokeWidth={2.5} style={{ color: "var(--ls-teal, #15B8A6)" }} />
       </span>
       <span
         className="leading-none tracking-tight"
         style={{ fontFamily: "'Manrope', Inter, system-ui, sans-serif", fontWeight: 700, fontSize: 22 }}
       >
-        <span style={{ color: "#15B8A6" }}>Live</span>
-        <span style={{ color: "#0E2A47" }}>Surgery</span>
+        <span style={{ color: "var(--ls-teal, #15B8A6)" }}>Live</span>
+        <span style={{ color: "var(--ls-navy, #0E2A47)" }}>Surgery</span>
       </span>
     </a>
   );
@@ -46,22 +43,19 @@ export default function Navbar({
   setRole,
   currentTab,
   setCurrentTab,
-  // Optional niceties you can wire from App later:
+  // optional niceties you can wire later:
   isRecording = false,
   theme = "light",
-  onToggleTheme
+  onToggleTheme,
 }) {
   const allTabs = [
     { id: "Live", label: "Live", icon: PlayCircle },
     { id: "Archive", label: "Archive", icon: ArchiveIcon },
-    { id: "Analytics", label: "Analytics", icon: BarChart3 }
+    { id: "Analytics", label: "Analytics", icon: BarChart3 },
   ];
 
   // Viewer sees only Live
-  const tabs = useMemo(
-    () => (role === "viewer" ? allTabs.filter((t) => t.id === "Live") : allTabs),
-    [role]
-  );
+  const tabs = useMemo(() => (role === "viewer" ? allTabs.filter((t) => t.id === "Live") : allTabs), [role]);
 
   const handleRoleChange = (e) => setRole(e.target.value);
 
@@ -70,15 +64,15 @@ export default function Navbar({
     e.preventDefault();
     const idx = tabs.findIndex((t) => t.id === currentTab);
     if (idx === -1) return;
-    const next =
-      e.key === "ArrowRight"
-        ? tabs[(idx + 1) % tabs.length]
-        : tabs[(idx - 1 + tabs.length) % tabs.length];
+    const next = e.key === "ArrowRight" ? tabs[(idx + 1) % tabs.length] : tabs[(idx - 1 + tabs.length) % tabs.length];
     setCurrentTab(next.id);
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-40 w-full border-b bg-white/90 backdrop-blur relative">
+      {/* Subtle teal brand accent */}
+      <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: "var(--ls-teal, #15B8A6)" }} />
+
       <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-4">
         {/* Left: Brand */}
         <BrandLogo size={40} />
@@ -99,10 +93,8 @@ export default function Navbar({
                 aria-current={active ? "page" : undefined}
                 className={[
                   "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm transition",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]", // teal focus
-                  active
-                    ? "bg-blue-600 text-white shadow" // keep your existing active blue
-                    : "text-slate-700 hover:bg-slate-100"
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]",
+                  active ? "bg-blue-600 text-white shadow" : "text-slate-700 hover:bg-slate-100",
                 ].join(" ")}
               >
                 <Icon className="h-4 w-4" aria-hidden="true" />
@@ -129,7 +121,7 @@ export default function Navbar({
             <button
               type="button"
               onClick={onToggleTheme}
-              className="inline-flex items-center justify-center rounded-md border px-2 py-1 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
+              className="inline-flex items-center justify-center rounded-md border px-2 py-1 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
               title="Toggle theme"
               aria-label="Toggle theme"
             >
@@ -145,7 +137,7 @@ export default function Navbar({
               id="role"
               value={role}
               onChange={handleRoleChange}
-              className="border border-slate-300 rounded-md px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
+              className="border border-slate-300 rounded-md px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
             >
               <option value="surgeon">Surgeon</option>
               <option value="viewer">Viewer</option>

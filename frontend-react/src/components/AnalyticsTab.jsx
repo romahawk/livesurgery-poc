@@ -1,28 +1,96 @@
+import React from "react";
 import {
-  ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
-  BarChart, Bar, Legend, PieChart, Pie, Cell
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  BarChart,
+  Bar,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area,
 } from "recharts";
 import { Activity, Video, MessageSquare, LayoutDashboard, AlertTriangle } from "lucide-react";
 import {
-  sessionsDaily, sourceUtilization, qosTrend, engagementDaily,
-  layoutDistribution, errorsTable, kpis
+  sessionsDaily,
+  sourceUtilization,
+  qosTrend,
+  engagementDaily,
+  layoutDistribution,
+  errorsTable,
+  kpis,
 } from "../data/analyticsMock";
+
+/* ---------- Palette (ClinicalTrust light) ---------- */
+const COLORS = {
+  teal: "#15B8A6",
+  tealLight: "#8FE7D8",
+  navy: "#0E2A47",
+  mint: "#CFF4EC",
+  blue: "#60A5FA",
+  cyan: "#38BDF8",
+  violet: "#A78BFA",
+  slate: "#94A3B8",
+};
+
+const SOURCE_COLORS = {
+  Endoscope: COLORS.teal,
+  Microscope: COLORS.blue,
+  Monitor: COLORS.cyan,
+  PTZ: COLORS.violet,
+};
+
+const axisStyle = { fontSize: 12, fill: "#475569" };
+const gridStyle = { stroke: "#E2E8F0", strokeDasharray: "4 4" };
+const tooltipStyle = {
+  background: "#fff",
+  border: "1px solid #E2E8F0",
+  borderRadius: 8,
+  boxShadow: "0 4px 24px rgba(2,8,23,0.08)",
+  fontSize: 12,
+};
+
+/* ---------- Small UI bits ---------- */
+function Card({ title, icon: Icon, right, children }) {
+  return (
+    <section className="rounded-xl border bg-white p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="text-sm font-semibold text-slate-700 inline-flex items-center gap-2">
+          {Icon && <Icon className="h-4 w-4 text-slate-500" aria-hidden />}
+          <span>{title}</span>
+        </div>
+        {right}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 function KpiCard({ icon: Icon, label, value, sub }) {
   return (
     <div className="rounded-xl border bg-white p-4 flex items-center gap-3">
-      <div className="rounded-lg border p-2">
+      <div
+        className="rounded-lg border p-2"
+        style={{ background: COLORS.mint, borderColor: COLORS.teal, color: COLORS.teal }}
+      >
         <Icon className="h-5 w-5" aria-hidden />
       </div>
       <div>
-        <div className="text-xs text-gray-500">{label}</div>
-        <div className="text-xl font-semibold">{value}</div>
-        {sub && <div className="text-xs text-gray-500">{sub}</div>}
+        <div className="text-xs text-slate-500">{label}</div>
+        <div className="text-xl font-semibold text-slate-900">{value}</div>
+        {sub && <div className="text-xs text-slate-500">{sub}</div>}
       </div>
     </div>
   );
 }
 
+/* ---------- Page ---------- */
 export default function AnalyticsTab() {
   return (
     <div className="p-4 space-y-6">
@@ -34,130 +102,181 @@ export default function AnalyticsTab() {
         <KpiCard icon={AlertTriangle} label="Stalls / Session" value={kpis.stallsPerSession} />
       </div>
 
-      {/* Sessions over time */}
-      <section className="rounded-xl border bg-white p-4">
-        <div className="mb-2 font-semibold">Sessions (per day)</div>
+      {/* Sessions & Avg Min */}
+      <Card title="Sessions & Avg Time" icon={Activity}>
         <div className="h-64">
           <ResponsiveContainer>
-            <LineChart data={sessionsDaily}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip />
+            <AreaChart data={sessionsDaily} margin={{ left: 10, right: 20 }}>
+              <defs>
+                <linearGradient id="avgFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={COLORS.teal} stopOpacity={0.25} />
+                  <stop offset="100%" stopColor={COLORS.teal} stopOpacity={0.06} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid {...gridStyle} />
+              <XAxis dataKey="date" tick={axisStyle} />
+              <YAxis yAxisId="left" tick={axisStyle} />
+              <YAxis yAxisId="right" orientation="right" tick={axisStyle} />
+              <Tooltip contentStyle={tooltipStyle} />
               <Legend />
-              <Line yAxisId="left" type="monotone" dataKey="sessions" name="Sessions" />
-              <Line yAxisId="right" type="monotone" dataKey="avgDurationMin" name="Avg Min" />
-            </LineChart>
+              <Area
+                yAxisId="left"
+                type="monotone"
+                dataKey="avgDurationMin"
+                name="Avg Min"
+                stroke={COLORS.teal}
+                strokeWidth={2}
+                fill="url(#avgFill)"
+                dot={{ r: 2 }}
+                activeDot={{ r: 4 }}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="sessions"
+                name="Sessions"
+                stroke={COLORS.navy}
+                strokeWidth={2}
+                dot={{ r: 2 }}
+                activeDot={{ r: 4 }}
+              />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
-      </section>
+      </Card>
 
-      {/* Source utilization */}
-      <section className="rounded-xl border bg-white p-4">
-        <div className="mb-2 font-semibold inline-flex items-center gap-2">
-          <Video className="h-4 w-4" />
-          <span>Source Time-in-View (min/day)</span>
-        </div>
+      {/* Source Time-in-View */}
+      <Card title="Source Time-in-View (min/day)" icon={Video}>
         <div className="h-64">
           <ResponsiveContainer>
-            <BarChart data={sourceUtilization}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
+            <BarChart data={sourceUtilization} margin={{ left: 10, right: 20 }}>
+              <CartesianGrid {...gridStyle} />
+              <XAxis dataKey="date" tick={axisStyle} />
+              <YAxis tick={axisStyle} />
+              <Tooltip contentStyle={tooltipStyle} />
               <Legend />
-              <Bar dataKey="Endoscope" stackId="a" />
-              <Bar dataKey="Microscope" stackId="a" />
-              <Bar dataKey="PTZ" stackId="a" />
-              <Bar dataKey="Monitor" stackId="a" />
+              {Object.keys(SOURCE_COLORS).map((key) => (
+                <Bar
+                  key={key}
+                  dataKey={key}
+                  stackId="tiv"
+                  fill={SOURCE_COLORS[key]}
+                  name={key}
+                  radius={[6, 6, 0, 0]}
+                />
+              ))}
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </section>
+      </Card>
 
-      {/* QoS trend */}
-      <section className="rounded-xl border bg-white p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="h-64">
-          <div className="mb-2 font-semibold">Latency (ms)</div>
-          <ResponsiveContainer>
-            <LineChart data={qosTrend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="latencyMs" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+      {/* QoS: Latency + Stalls */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card title="Latency (ms)">
+          <div className="h-64">
+            <ResponsiveContainer>
+              <AreaChart data={qosTrend} margin={{ left: 10, right: 20 }}>
+                <defs>
+                  <linearGradient id="latFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={COLORS.navy} stopOpacity={0.25} />
+                    <stop offset="100%" stopColor={COLORS.navy} stopOpacity={0.06} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid {...gridStyle} />
+                <XAxis dataKey="date" tick={axisStyle} />
+                <YAxis tick={axisStyle} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Area
+                  type="monotone"
+                  dataKey="latencyMs"
+                  name="Latency"
+                  stroke={COLORS.navy}
+                  strokeWidth={2}
+                  fill="url(#latFill)"
+                  dot={{ r: 2 }}
+                  activeDot={{ r: 4 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
 
-        <div className="h-64">
-          <div className="mb-2 font-semibold">Stalls (per day)</div>
-          <ResponsiveContainer>
-            <BarChart data={qosTrend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="stalls" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
+        <Card title="Stalls (per day)">
+          <div className="h-64">
+            <ResponsiveContainer>
+              <BarChart data={qosTrend} margin={{ left: 10, right: 20 }}>
+                <CartesianGrid {...gridStyle} />
+                <XAxis dataKey="date" tick={axisStyle} />
+                <YAxis allowDecimals={false} tick={axisStyle} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="stalls" name="Stalls" fill={COLORS.slate} radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
 
       {/* Engagement + Layouts */}
-      <section className="rounded-xl border bg-white p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="h-64">
-          <div className="mb-2 font-semibold inline-flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            <span>Engagement (messages/day)</span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card title="Engagement (messages/day)" icon={MessageSquare}>
+          <div className="h-64">
+            <ResponsiveContainer>
+              <BarChart data={engagementDaily} margin={{ left: 10, right: 20 }}>
+                <CartesianGrid {...gridStyle} />
+                <XAxis dataKey="date" tick={axisStyle} />
+                <YAxis tick={axisStyle} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend />
+                <Bar dataKey="messages" name="Messages" fill={COLORS.teal} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="participants" name="Participants" fill={COLORS.blue} radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          <ResponsiveContainer>
-            <BarChart data={engagementDaily}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="messages" name="Messages" />
-              <Bar dataKey="participants" name="Participants" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        </Card>
 
-        <div className="h-64">
-          <div className="mb-2 font-semibold inline-flex items-center gap-2">
-            <LayoutDashboard className="h-4 w-4" />
-            <span>Layout Distribution</span>
+        <Card title="Layout Distribution" icon={LayoutDashboard}>
+          <div className="h-64">
+            <ResponsiveContainer>
+              <PieChart>
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend />
+                <Pie
+                  data={layoutDistribution}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={50}
+                  outerRadius={80}
+                  stroke="#fff"
+                  strokeWidth={2}
+                >
+                  {layoutDistribution.map((_, i) => (
+                    <Cell
+                      key={i}
+                      fill={[COLORS.teal, COLORS.blue, COLORS.cyan, COLORS.violet, COLORS.slate][i % 5]}
+                    />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
           </div>
-          <ResponsiveContainer>
-            <PieChart>
-              <Pie data={layoutDistribution} dataKey="value" nameKey="name" outerRadius="80%">
-                {layoutDistribution.map((_, i) => <Cell key={i} />)}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
+        </Card>
+      </div>
 
       {/* Errors table */}
-      <section className="rounded-xl border bg-white p-4">
-        <div className="mb-2 font-semibold inline-flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" />
-          <span>Errors & Warnings</span>
-        </div>
+      <Card title="Errors & Warnings" icon={AlertTriangle}>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr className="[&>th]:px-3 [&>th]:py-2 text-left">
-                <th>Time</th><th>Type</th><th>Source</th><th>Count</th>
+            <thead className="bg-slate-50">
+              <tr className="[&>th]:px-3 [&>th]:py-2 text-left text-slate-600">
+                <th>Time</th>
+                <th>Type</th>
+                <th>Source</th>
+                <th>Count</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {errorsTable.map((e, i) => (
-                <tr key={i} className="hover:bg-gray-50">
+                <tr key={i} className="hover:bg-slate-50">
                   <td className="px-3 py-2">{e.ts}</td>
                   <td className="px-3 py-2">{e.type}</td>
                   <td className="px-3 py-2">{e.source}</td>
@@ -167,7 +286,7 @@ export default function AnalyticsTab() {
             </tbody>
           </table>
         </div>
-      </section>
+      </Card>
     </div>
   );
 }
