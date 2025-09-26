@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import DisplayGrid from "./components/DisplayGrid";
@@ -7,6 +7,7 @@ import PatientInfoPanel, { PatientInfoButton } from "./components/PatientInfoPan
 import LiveChatPanel, { LiveChatButton } from "./components/LiveChatPanel";
 import ArchiveTab from "./components/ArchiveTab";
 import AnalyticsTab from "./components/AnalyticsTab";
+import OnboardingModal from "./components/OnboardingModal";
 
 /* === dnd-kit === */
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from "@dnd-kit/core";
@@ -38,8 +39,26 @@ export default function App() {
     { id: 2, surgeon: "Dr. Müller", procedure: "Neurosurgical Debridement", date: "2025-08-09", duration: "02:15:00" },
   ]);
 
-  /* === GRID SOURCES LIVE STATE (moved to App to connect Sidebar + Grid) === */
+  /* === GRID SOURCES LIVE STATE (connect Sidebar + Grid) === */
   const [gridSources, setGridSources] = useState([null, null, null, null]); // filenames: "endoscope.mp4", etc.
+
+  /* === Onboarding state === */
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [hasOnboarded, setHasOnboarded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem("ls_onboarded") === "1";
+      setHasOnboarded(seen);
+      if (!seen) {
+        // Open once for first-time users
+        const t = setTimeout(() => setShowOnboarding(true), 400);
+        return () => clearTimeout(t);
+      }
+    } catch {
+      /* no-op */
+    }
+  }, []);
 
   /* === dnd-kit sensors & handler === */
   const sensors = useSensors(
@@ -68,9 +87,46 @@ export default function App() {
   const handlePause = () => setSessionStatus("paused");
   const handleStop = () => setSessionStatus("stopped");
 
+  /* === Hotkeys: S(start) / P(pause) / X(stop) / I(info) / C(chat) === */
+  useEffect(() => {
+    const isTyping = () => {
+      const el = document.activeElement;
+      if (!el) return false;
+      const tag = el.tagName?.toLowerCase();
+      return (
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
+        el.getAttribute?.("contenteditable") === "true"
+      );
+    };
+
+    const onKey = (e) => {
+      if (isTyping()) return;
+      const key = e.key?.toLowerCase();
+      if (key === "s") handleStart();
+      else if (key === "p") handlePause();
+      else if (key === "x") handleStop();
+      else if (key === "i") setShowPatientInfoPanel(true);
+      else if (key === "c") {
+        setShowChatPanel(true);
+        setUnreadCount(0);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [handleStart, handlePause, handleStop]);
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <Navbar role={role} setRole={setRole} currentTab={currentTab} setCurrentTab={setCurrentTab} />
+      <Navbar
+        role={role}
+        setRole={setRole}
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
+        onOpenOnboarding={() => setShowOnboarding(true)}
+        showGuidePulse={!hasOnboarded}
+      />
 
       <main className="flex-1 w-full flex px-4 py-6">
         {/* Wrap Sidebar + Grid in a single DndContext so they share drag state */}
@@ -80,20 +136,15 @@ export default function App() {
           <div className="flex-1 bg-white ml-4 p-4 rounded shadow relative">
             {currentTab === "Live" && (
               <>
-                {/* Sticky controls with hotkeys (S/P/X and I/C) */}
+                {/* Session controls */}
                 <SessionControls
                   onStart={handleStart}
                   onPause={handlePause}
                   onStop={handleStop}
                   status={sessionStatus}
-                  onPatientInfo={() => setShowPatientInfoPanel(true)}
-                  onLiveChat={() => {
-                    setShowChatPanel(true);
-                    setUnreadCount(0);
-                  }}
                 />
 
-                {/* Header action buttons with badges */}
+                {/* Header action buttons */}
                 <div className="flex justify-end gap-2 mb-2">
                   <PatientInfoButton onClick={() => setShowPatientInfoPanel(true)} hasUnsaved={patientHasUnsaved} />
                   <LiveChatButton
@@ -101,11 +152,10 @@ export default function App() {
                       setShowChatPanel(true);
                       setUnreadCount(0);
                     }}
-                    unreadCount={unreadCount}
                   />
                 </div>
 
-                {/* 2x2 grid (now controlled by App state) */}
+                {/* 2x2 grid */}
                 <DisplayGrid gridSources={gridSources} setGridSources={setGridSources} />
               </>
             )}
@@ -120,7 +170,11 @@ export default function App() {
           <PatientInfoPanel
             role={role}
             patientInfo={patientInfo}
-            onUpdate={setPatientInfo}
+            onUpdate={(info) => {
+              setPatientInfo(info);
+              setPatientHasUnsaved(false);
+              try { localStorage.setItem("ls_onboarded", "1"); setHasOnboarded(true); } catch {}
+            }}
             onClose={() => setShowPatientInfoPanel(false)}
             onDirtyChange={setPatientHasUnsaved}
           />
@@ -134,6 +188,7 @@ export default function App() {
               const msg = { sender: role, text };
               setChatMessages((prev) => [...prev, msg]);
               if (!showChatPanel) setUnreadCount((n) => n + 1);
+              try { localStorage.setItem("ls_onboarded", "1"); setHasOnboarded(true); } catch {}
             }}
             onClose={() => {
               setShowChatPanel(false);
@@ -142,6 +197,9 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Onboarding modal */}
+      {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
     </div>
   );
 }
