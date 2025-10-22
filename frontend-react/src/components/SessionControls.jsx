@@ -13,7 +13,8 @@ export default function SessionControls({ onStart, onPause, onStop, status }) {
       clearInterval(intervalId);
     }
     return () => clearInterval(intervalId);
-  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -21,14 +22,10 @@ export default function SessionControls({ onStart, onPause, onStop, status }) {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const btnBase =
-    "inline-flex items-center gap-2 px-3 py-1 rounded shadow-sm text-white " +
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]";
-
   return (
-    <div className="p-4 bg-white rounded-xl border mb-4">
+    <div className="p-4 theme-panel mb-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="text-sm inline-flex items-center gap-2">
+        <div className="text-sm inline-flex items-center gap-2 text-default">
           <Clock4 className="h-4 w-4" aria-hidden />
           <strong>Session Time:</strong>
           <span>{formatTime(timer)}</span>
@@ -36,29 +33,29 @@ export default function SessionControls({ onStart, onPause, onStop, status }) {
 
         <div className="flex flex-wrap gap-2 justify-end">
           <button
-            className={`${btnBase} bg-green-600 hover:bg-green-700`}
+            className="btn btn-start"
             onClick={onStart}
             disabled={status === "running"}
+            title="Start (S)"
           >
             <Play className="h-4 w-4" />
             Start
           </button>
 
           <button
-            className={`${btnBase} bg-amber-500 hover:bg-amber-600`}
+            className="btn btn-pause"
             onClick={onPause}
             disabled={status !== "running"}
+            title="Pause (P)"
           >
             <Pause className="h-4 w-4" />
             Pause
           </button>
 
           <button
-            className={`${btnBase} bg-rose-600 hover:bg-rose-700`}
-            onClick={() => {
-              onStop();
-              setTimer(0);
-            }}
+            className="btn btn-stop"
+            onClick={() => { onStop(); setTimer(0); }}
+            title="Stop (X)"
           >
             <Square className="h-4 w-4" />
             Stop

@@ -7,7 +7,7 @@ import {
   CircleDot,
   Sun,
   Moon,
-  HelpCircle,        // NEW
+  HelpCircle,
 } from "lucide-react";
 
 /** Brand logo (Clinical Trust palette: teal/mint/navy) */
@@ -33,7 +33,7 @@ function BrandLogo({ size = 40 }) {
         style={{ fontFamily: "'Manrope', Inter, system-ui, sans-serif", fontWeight: 700, fontSize: 22 }}
       >
         <span style={{ color: "var(--ls-teal, #15B8A6)" }}>Live</span>
-        <span style={{ color: "var(--ls-navy, #0E2A47)" }}>Surgery</span>
+        <span style={{ color: "var(--brand-word, var(--ls-navy, #0E2A47))" }}>Surgery</span>
       </span>
     </a>
   );
@@ -47,8 +47,8 @@ export default function Navbar({
   isRecording = false,
   theme = "light",
   onToggleTheme,
-  onOpenOnboarding,   // NEW: pass from App
-  showGuidePulse = false, // NEW: draw attention on first run
+  onOpenOnboarding,
+  showGuidePulse = false,
 }) {
   const allTabs = [
     { id: "Live", label: "Live", icon: PlayCircle },
@@ -57,8 +57,6 @@ export default function Navbar({
   ];
 
   const tabs = useMemo(() => (role === "viewer" ? allTabs.filter((t) => t.id === "Live") : allTabs), [role]);
-
-  const handleRoleChange = (e) => setRole(e.target.value);
 
   const onTabsKeyDown = (e) => {
     if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
@@ -70,7 +68,7 @@ export default function Navbar({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-white/90 backdrop-blur relative">
+    <header className="sticky top-0 z-40 w-full border-b bg-surface/90 backdrop-blur relative">
       {/* Teal brand accent */}
       <div className="absolute inset-x-0 top-0 h-[3px]" style={{ background: "var(--ls-teal, #15B8A6)" }} />
 
@@ -92,11 +90,7 @@ export default function Navbar({
                 type="button"
                 onClick={() => setCurrentTab(id)}
                 aria-current={active ? "page" : undefined}
-                className={[
-                  "inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm transition",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]",
-                  active ? "bg-blue-600 text-white shadow" : "text-slate-700 hover:bg-slate-100",
-                ].join(" ")}
+                className={`tab-pill ${active ? "is-active" : ""}`}
               >
                 <Icon className="h-4 w-4" aria-hidden="true" />
                 {label}
@@ -107,7 +101,6 @@ export default function Navbar({
 
         {/* Right cluster */}
         <div className="flex items-center gap-3">
-          {/* Recording chip (optional) */}
           {isRecording && (
             <span
               className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium"
@@ -119,12 +112,12 @@ export default function Navbar({
             </span>
           )}
 
-          {/* Theme toggle (optional) */}
+          {/* Theme toggle */}
           {onToggleTheme && (
             <button
               type="button"
               onClick={onToggleTheme}
-              className="inline-flex items-center justify-center rounded-md border px-2 py-1 text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
+              className="inline-flex items-center justify-center rounded-md border px-2 py-1 text-default hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
               title="Toggle theme"
               aria-label="Toggle theme"
             >
@@ -132,21 +125,20 @@ export default function Navbar({
             </button>
           )}
 
-          {/* NEW: Onboarding / Guide button */}
+          {/* Guide */}
           <button
             type="button"
             onClick={onOpenOnboarding}
-            className={[
-              "relative inline-flex items-center gap-2 rounded-md border px-3 py-1 text-sm",
-              "text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]",
-            ].join(" ")}
+            className="guide-pill"
             title="Quick Guide"
             aria-label="Quick Guide"
           >
-            <HelpCircle className="h-4 w-4 text-[var(--ls-teal,#15B8A6)]" />
-            Guide
+            <span className="inline-flex items-center gap-2 text-default">
+              <HelpCircle className="h-4 w-4 text-[var(--ls-teal,#15B8A6)]" />
+              Guide
+            </span>
             {showGuidePulse && (
-              <span className="absolute -top-1 -right-1 inline-flex h-2.5 w-2.5">
+              <span className="relative -top-2 -right-1 inline-flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--ls-teal,#15B8A6)] opacity-75 animate-ping"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--ls-teal,#15B8A6)]"></span>
               </span>
@@ -155,14 +147,12 @@ export default function Navbar({
 
           {/* Role selector */}
           <div className="flex items-center gap-2">
-            <label htmlFor="role" className="text-sm text-slate-600">
-              Role:
-            </label>
+            <label htmlFor="role" className="text-sm text-default">Role:</label>
             <select
               id="role"
               value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="border border-slate-300 rounded-md px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
+              onChange={(e) => (typeof setRole === "function" ? setRole(e.target.value) : null)}
+              className="border-default border rounded-md px-2 py-1 text-sm bg-surface text-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
             >
               <option value="surgeon">Surgeon</option>
               <option value="viewer">Viewer</option>

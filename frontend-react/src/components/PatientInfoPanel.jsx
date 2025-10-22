@@ -41,16 +41,16 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
   };
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed top-0 right-0 w-80 h-full bg-white shadow-lg p-4 border-l z-50">
+    <div role="dialog" aria-modal="true" className="fixed top-0 right-0 w-80 h-full theme-panel p-4 border-l border-default z-50">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold inline-flex items-center gap-2">
-          <User className="h-5 w-5 text-[#15B8A6]" aria-hidden />
+        <h2 className="text-lg font-semibold inline-flex items-center gap-2 text-default">
+          <User className="h-5 w-5 text-[var(--ls-teal,#15B8A6)]" aria-hidden />
           <span>Patient Info</span>
           {dirty && <span className="ml-2 h-2 w-2 rounded-full bg-amber-400" title="Unsaved changes" />}
         </h2>
         <button
           onClick={() => (dirty && !confirm("Discard unsaved changes?")) ? null : onClose?.()}
-          className="text-slate-500 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6] rounded"
+          className="text-subtle hover:opacity-90 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
           aria-label="Close patient info (Esc)"
           title="Close (Esc)"
         >
@@ -66,7 +66,7 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
               name="name"
               value={localInfo.name}
               onChange={handleChange}
-              className="w-full border px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
+              className="searchbar w-full rounded px-2 py-1"
             />
           </Field>
 
@@ -76,7 +76,7 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
               name="id"
               value={localInfo.id}
               onChange={handleChange}
-              className="w-full border px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
+              className="searchbar w-full rounded px-2 py-1"
             />
           </Field>
 
@@ -86,7 +86,7 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
               name="age"
               value={localInfo.age}
               onChange={handleChange}
-              className="w-full border px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
+              className="searchbar w-full rounded px-2 py-1"
             />
           </Field>
 
@@ -95,7 +95,7 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
               name="notes"
               value={localInfo.notes}
               onChange={handleChange}
-              className="w-full border px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
+              className="searchbar w-full rounded px-2 py-1"
               rows={3}
             />
           </Field>
@@ -113,10 +113,10 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
         </div>
       ) : (
         <div className="space-y-2 text-sm">
-          <p><strong>Name:</strong> {patientInfo.name}</p>
-          <p><strong>ID:</strong> {patientInfo.id}</p>
-          <p><strong>Age:</strong> {patientInfo.age}</p>
-          <p><strong>Notes:</strong> {patientInfo.notes}</p>
+          <p className="text-default"><strong>Name:</strong> {patientInfo.name}</p>
+          <p className="text-default"><strong>ID:</strong> {patientInfo.id}</p>
+          <p className="text-default"><strong>Age:</strong> {patientInfo.age}</p>
+          <p className="text-default"><strong>Notes:</strong> {patientInfo.notes}</p>
         </div>
       )}
     </div>
@@ -126,7 +126,7 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-sm font-medium mb-1">{label}</label>
+      <label className="block text-sm font-medium mb-1 text-default">{label}</label>
       {children}
     </div>
   );
