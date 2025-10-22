@@ -118,6 +118,34 @@
 
 /* -------------------- COMPONENT TWEAKS -------------------- */
 @layer base {
+  /* Mode toggle pill (matches Guide chip aesthetics) */
+  .mode-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .35rem .6rem;
+    line-height: 1;
+    border-radius: 9999px;
+    background: var(--elev);
+    color: var(--text);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 0 rgba(255,255,255,.02), 0 6px 18px rgba(0,0,0,.18);
+    transition: background .15s ease, border-color .15s ease, transform .06s ease;
+  }
+  .mode-toggle:hover { opacity: .95; }
+  .mode-toggle:active { transform: translateY(1px); }
+  .mode-toggle:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(96,165,250,.35);
+  }
+  .mode-toggle__label { font-size: .875rem; }
+
+  /* Slightly stronger contrast on dark background */
+  html.dark .mode-toggle {
+    background: #0d1629;
+    border-color: #3b4a63;
+  }
+
   /* Panels / shells */
   .theme-panel {
     background: var(--panel);

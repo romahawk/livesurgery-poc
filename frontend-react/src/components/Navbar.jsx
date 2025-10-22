@@ -67,6 +67,9 @@ export default function Navbar({
     setCurrentTab(next.id);
   };
 
+  const nextMode = theme === "dark" ? "Light" : "Dark";
+  const ModeIcon = theme === "dark" ? Sun : Moon; // show target mode icon
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-surface/90 backdrop-blur relative">
       {/* Teal brand accent */}
@@ -112,16 +115,17 @@ export default function Navbar({
             </span>
           )}
 
-          {/* Theme toggle */}
+          {/* Theme toggle (pill-style, matches UI; shows target mode) */}
           {onToggleTheme && (
             <button
               type="button"
               onClick={onToggleTheme}
-              className="inline-flex items-center justify-center rounded-md border px-2 py-1 text-default hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
-              title="Toggle theme"
-              aria-label="Toggle theme"
+              className="mode-toggle"
+              aria-label={`Switch to ${nextMode} mode`}
+              title={`Switch to ${nextMode} mode`}
             >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              <ModeIcon className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="mode-toggle__label">{nextMode}</span>
             </button>
           )}
 

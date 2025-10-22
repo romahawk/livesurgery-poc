@@ -1,14 +1,22 @@
 import { useTheme } from "../theme/ThemeProvider";
+import { Sun, Moon } from "lucide-react";
 
+/** Pill-style toggle that fits the app's UI */
 export default function ThemeToggle() {
   const { theme, toggle } = useTheme();
+  const next = theme === "dark" ? "Light" : "Dark";
+  const Icon = theme === "dark" ? Sun : Moon; // show target mode icon
+
   return (
     <button
+      type="button"
       onClick={toggle}
-      className="inline-flex items-center gap-2 rounded-md border border-default px-3 py-1 bg-transparent text-default hover:opacity-90"
-      title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+      className="mode-toggle"
+      aria-label={`Switch to ${next} mode`}
+      title={`Switch to ${next} mode`}
     >
-      {theme === "light" ? "🌙 Dark" : "☀️ Light"}
+      <Icon className="h-4 w-4 shrink-0" aria-hidden />
+      <span className="mode-toggle__label">{next}</span>
     </button>
   );
 }
