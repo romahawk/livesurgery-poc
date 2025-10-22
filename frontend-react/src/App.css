@@ -1,0 +1,7 @@
+/* Panels that auto-theme */
+.theme-panel {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}

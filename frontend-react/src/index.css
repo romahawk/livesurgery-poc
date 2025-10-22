@@ -1,0 +1,315 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* -------------------- THEME TOKENS -------------------- */
+@layer base {
+  /* LIGHT */
+  html.light {
+    color-scheme: light;
+
+    /* Canvas */
+    --bg: #ffffff;
+
+    /* Text */
+    --text: #111827;    /* gray-900 */
+    --subtle: #6b7280;  /* gray-500 */
+
+    /* Surfaces */
+    --panel: #ffffff;   /* cards, inputs */
+    --elev:  #f8fafc;   /* subtle raised bg (slate-50) */
+
+    /* Borders / dividers */
+    --border: #e5e7eb;  /* gray-200 */
+
+    /* Accent */
+    --primary: #2563eb; /* blue-600 */
+
+    /* Brand word (Navbar “Surgery”) */
+    --brand-word: #0E2A47;
+
+    /* Semantic button tokens */
+    --btn-start-bg:  color-mix(in oklch, #16a34a 18%, var(--panel));
+    --btn-start-bg-hover:  color-mix(in oklch, #16a34a 26%, var(--panel));
+    --btn-start-border:    color-mix(in oklch, #16a34a 50%, var(--border));
+
+    --btn-pause-bg:  color-mix(in oklch, #f59e0b 18%, var(--panel));
+    --btn-pause-bg-hover:  color-mix(in oklch, #f59e0b 26%, var(--panel));
+    --btn-pause-border:    color-mix(in oklch, #f59e0b 50%, var(--border));
+
+    --btn-stop-bg:   color-mix(in oklch, #e11d48 18%, var(--panel));
+    --btn-stop-bg-hover:   color-mix(in oklch, #e11d48 26%, var(--panel));
+    --btn-stop-border:     color-mix(in oklch, #e11d48 50%, var(--border));
+  }
+
+  /* DARK — higher contrast + clearer borders */
+  html.dark {
+    color-scheme: dark;
+
+    /* Canvas */
+    --bg: #0b1220;       /* deep navy */
+
+    /* Text */
+    --text: #e5e7eb;     /* slate-200 */
+    --subtle: #9ca3af;   /* slate-400 */
+
+    /* Surfaces */
+    --panel: #0f172a;    /* slate-900 */
+    --elev:  #111827;    /* slightly brighter raised surface */
+
+    /* Borders / dividers */
+    --border: #334155;   /* slate-700 */
+
+    /* Accent */
+    --primary: #60a5fa;  /* blue-400 */
+
+    /* Brand word (Navbar “Surgery”) */
+    --brand-word: #9CC7FF; /* or #E5E7EB for light grey */
+
+    /* Semantic button tokens */
+    --btn-start-bg:  color-mix(in oklch, #16a34a 26%, #0d1629);
+    --btn-start-bg-hover:  color-mix(in oklch, #16a34a 34%, #0d1629);
+    --btn-start-border:    color-mix(in oklch, #16a34a 45%, var(--border));
+
+    --btn-pause-bg:  color-mix(in oklch, #f59e0b 26%, #0d1629);
+    --btn-pause-bg-hover:  color-mix(in oklch, #f59e0b 34%, #0d1629);
+    --btn-pause-border:    color-mix(in oklch, #f59e0b 45%, var(--border));
+
+    --btn-stop-bg:   color-mix(in oklch, #e11d48 26%, #0d1629);
+    --btn-stop-bg-hover:   color-mix(in oklch, #e11d48 34%, #0d1629);
+    --btn-stop-border:     color-mix(in oklch, #e11d48 45%, var(--border));
+  }
+
+  /* Canvas + typography */
+  :root {
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { opacity: .9; }
+
+  /* Native controls use theme */
+  input, select, textarea, button {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  ::placeholder { color: var(--subtle); }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #93c5fd; /* blue-300 */
+    box-shadow: 0 0 0 3px rgba(37,99,235,.25);
+  }
+}
+
+/* -------------------- COMPONENT TWEAKS -------------------- */
+@layer base {
+  /* Mode toggle pill (matches Guide chip aesthetics) */
+  .mode-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .35rem .6rem;
+    line-height: 1;
+    border-radius: 9999px;
+    background: var(--elev);
+    color: var(--text);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 0 rgba(255,255,255,.02), 0 6px 18px rgba(0,0,0,.18);
+    transition: background .15s ease, border-color .15s ease, transform .06s ease;
+  }
+  .mode-toggle:hover { opacity: .95; }
+  .mode-toggle:active { transform: translateY(1px); }
+  .mode-toggle:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(96,165,250,.35);
+  }
+  .mode-toggle__label { font-size: .875rem; }
+
+  /* Slightly stronger contrast on dark background */
+  html.dark .mode-toggle {
+    background: #0d1629;
+    border-color: #3b4a63;
+  }
+
+  /* Panels / shells */
+  .theme-panel {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+  }
+  html.dark .theme-panel {
+    box-shadow: 0 1px 0 rgba(255,255,255,0.02), 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  /* Lifted inputs or large bars (e.g., Archive search) */
+  .searchbar,
+  .form-large {
+    background: var(--elev);
+    border-color: var(--border);
+  }
+  html.dark .searchbar,
+  html.dark .form-large {
+    background: var(--elev);
+  }
+
+  /* Tables (Archive) */
+  table { color: var(--text); }
+  thead th {
+    border-bottom: 1px solid var(--border);
+    background: var(--elev);
+  }
+  html.dark thead th {
+    color: #f3f4f6;             /* almost white */
+    background: #0d1629;        /* subtle header tint */
+  }
+  tbody tr {
+    background: var(--panel);
+    border-bottom: 1px solid color-mix(in oklch, var(--border) 100%, transparent);
+  }
+  html.dark tbody tr { border-bottom: 1px solid #253041; }
+  tbody tr:hover { background: color-mix(in oklch, var(--panel) 92%, var(--elev)); }
+  html.dark tbody tr:hover { background: #0d1629; }
+
+  /* Drop zones (“Drop Source Here”) */
+  .border-dashed { border-style: dashed; }
+  html.dark .border-dashed { border-color: #475569 !important; } /* slate-600 */
+  .text-subtle, .text-muted { color: var(--subtle); }
+
+  /* Generic muted surfaces/skeletons */
+  .muted-surface {
+    background: color-mix(in oklch, var(--panel) 92%, var(--elev));
+    border: 1px solid var(--border);
+  }
+  html.dark .muted-surface {
+    background: #0d1629;
+    border-color: var(--border);
+  }
+
+  /* ===== High-visibility tweaks for marked areas ===== */
+  /* SOURCES panel (left sidebar) */
+  .sources-panel {
+    background: var(--elev);
+    border: 1px solid color-mix(in oklch, var(--border) 92%, black);
+    border-radius: 0.75rem;
+  }
+  html.dark .sources-panel {
+    background: #0d1629;              /* lift from canvas */
+    border-color: #3b4a63;            /* clearer than --border */
+    box-shadow: 0 1px 0 rgba(255,255,255,.02), 0 10px 28px rgba(0,0,0,.45);
+  }
+  .sources-panel .source-item {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: .5rem;
+  }
+  html.dark .sources-panel .source-item {
+    background: #111a2d;
+    border-color: #44526a;
+  }
+
+  /* TABS (Live / Archive / Analytics) */
+  .tab-pill {
+    background: var(--elev);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: .6rem;
+    padding-inline: .75rem;
+    height: 34px;
+    display: inline-flex; align-items: center; gap: .4rem;
+  }
+  .tab-pill[aria-current="page"],
+  .tab-pill.is-active {
+    background: color-mix(in oklch, var(--primary) 14%, var(--elev));
+    border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+  }
+  .tab-pill:hover { opacity: .95; }
+  .tab-pill:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(96,165,250,.35);
+  }
+
+  /* GUIDE chip */
+  .guide-pill {
+    background: var(--elev);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    padding: .25rem .6rem;
+    line-height: 1;
+  }
+  html.dark .guide-pill {
+    background: #0d1629;
+    border-color: #3b4a63;
+  }
+
+  /* Small badge buttons inside tables */
+  .badge-btn {
+    background: var(--elev);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: .5rem;
+    padding: .25rem .5rem;
+  }
+  html.dark .badge-btn {
+    background: #111a2d;
+    border-color: #44526a;
+  }
+  .badge-btn:hover { opacity: .95; }
+
+  /* -------- Reusable session buttons (softer colors) -------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .375rem .75rem;
+    border-radius: .6rem;
+    border: 1px solid var(--border);
+    background: var(--elev);
+    color: var(--text);
+    box-shadow: 0 1px 0 rgba(255,255,255,.02), 0 4px 14px rgba(0,0,0,.15);
+  }
+  .btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(21,184,166,.35);
+  }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+  .btn-start {
+    background: var(--btn-start-bg);
+    border-color: var(--btn-start-border);
+  }
+  .btn-start:hover { background: var(--btn-start-bg-hover); }
+
+  .btn-pause {
+    background: var(--btn-pause-bg);
+    border-color: var(--btn-pause-border);
+  }
+  .btn-pause:hover { background: var(--btn-pause-bg-hover); }
+
+  .btn-stop {
+    background: var(--btn-stop-bg);
+    border-color: var(--btn-stop-border);
+  }
+  .btn-stop:hover { background: var(--btn-stop-bg-hover); }
+}
+
+/* -------------------- OPTIONAL HELPERS -------------------- */
+.bg-surface { background: var(--bg); }
+.text-default { color: var(--text); }
+.border-default { border-color: var(--border); }
