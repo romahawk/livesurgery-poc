@@ -14,7 +14,7 @@ LiveSurgery aims to modernize surgical collaboration by enabling:
 - Multi-source OR livestreaming (endoscope, PTZ, room camera, imaging)
 - Real-time remote participation (experts, residents, students)
 - Structured education (CME, replay, analytics)
-- Vendor-neutral OR integration (Surgiris, Surgimedia, FSN, Wolf, etc.)
+- Vendor-neutral OR integration 
 
 This PoC focuses on:
 - UX validation  
@@ -220,7 +220,7 @@ MedTech entrepreneur → Full-Stack Developer
 Specializing in OR Integration, Surgical Video, and Cloud Solutions.
 
 GitHub: **@romahawk**  
-Portfolio: *(add link once ready)*
+Portfolio: https://roman-mazuryk.vercel.app/#projects/livesurgery
 
 ---
 
