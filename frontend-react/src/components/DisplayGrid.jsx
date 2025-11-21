@@ -67,7 +67,7 @@ export default function DisplayGrid({
       setDragRef(node);
     };
 
-    const handlePanelClick = () => {
+    const handleClick = () => {
       if (!src && selectedSource && onPanelClick) {
         onPanelClick(index);
       }
@@ -79,11 +79,15 @@ export default function DisplayGrid({
         style={style}
         {...listeners}
         {...attributes}
-        onClick={handlePanelClick}
+        onClick={handleClick}
         onDoubleClick={(e) => src && toggleFullscreen(e.currentTarget)}
-        className={`relative rounded-xl flex items-center justify-center border-2 border-dashed transition theme-panel ${
-          isOver ? "border-blue-400 bg-blue-50" : ""
-        } ${src ? "cursor-move" : selectedSource ? "cursor-pointer" : "cursor-default"}`}
+        className={`
+          relative h-full
+          rounded-xl border-2 border-dashed theme-panel
+          ${isOver ? "border-blue-400 bg-blue-50/10" : "border-default/60"}
+          ${src ? "cursor-move" : selectedSource ? "cursor-pointer" : "cursor-default"}
+          flex
+        `}
       >
         {src ? (
           <>
@@ -106,7 +110,7 @@ export default function DisplayGrid({
               }
             />
 
-            {/* Toolbar – stop pointer from starting drag */}
+            {/* Toolbar */}
             <div className="absolute top-2 right-2 flex gap-1">
               <button
                 onPointerDown={(e) => e.stopPropagation()}
@@ -137,8 +141,9 @@ export default function DisplayGrid({
             </div>
           </>
         ) : (
-          <div className="flex flex-col items-center text-subtle pointer-events-none select-none px-2 text-xs sm:text-sm">
-            <LayoutDashboard className="h-5 w-5 mb-1" aria-hidden />
+          // SIMPLE FULL-HEIGHT PLACEHOLDER
+          <div className="w-full h-full flex flex-col items-center justify-center text-subtle text-sm pointer-events-none select-none">
+            <LayoutDashboard className="h-6 w-6 mb-2" aria-hidden />
             <span>
               {selectedSource ? "Tap to place selected source" : "Drop Source Here"}
             </span>
@@ -149,10 +154,11 @@ export default function DisplayGrid({
   };
 
   return (
-    <div className="h-full min-h-[280px] sm:min-h-[360px] grid grid-cols-2 gap-3 sm:gap-4 [grid-template-rows:1fr_1fr]">
+    <div className="h-full grid grid-cols-2 gap-3 sm:gap-4 [grid-template-rows:1fr_1fr]">
       {gridSources.map((src, index) => (
         <Panel key={index} src={src} index={index} />
       ))}
     </div>
   );
+
 }
