@@ -1,3 +1,14 @@
+.main-layout {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 1024px) {
+  .main-layout {
+    flex-direction: row;
+  }
+}
+
 /* Panels that auto-theme */
 .theme-panel {
   background: var(--panel);

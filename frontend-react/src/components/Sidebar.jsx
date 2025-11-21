@@ -1,62 +1,137 @@
-import { Camera, Microscope, Video, Monitor, ArrowLeftRight, GripVertical } from "lucide-react";
+import {
+  Camera,
+  Microscope,
+  Video,
+  Monitor,
+  ArrowLeftRight,
+  GripVertical,
+} from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 
-const SOURCE_ICON = { endoscope: Camera, microscope: Microscope, ptz: Video, monitor: Monitor };
-const STATUS_STYLES = {
+const SOURCE_ICON = {
+  endoscope: Camera,
+  microscope: Microscope,
+  ptz: Video,
+  monitor: Monitor,
+};
+
+const STATUS_DOT = {
+  live: "bg-emerald-400",
+  offline: "bg-red-500",
+  muted: "bg-amber-400",
+};
+
+const STATUS_PILL = {
   live: "border-green-600 text-green-700 bg-green-50",
   offline: "border-gray-300 text-gray-500 bg-gray-50",
   muted: "border-amber-500 text-amber-600 bg-amber-50",
 };
 
-function DraggableSource({ source }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `src-${source.id}`,
-    data: { src: source.src, label: source.label },
-  });
+function DraggableSource({ source, selected, onSelect }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: `src-${source.id}`,
+      data: { src: source.src, label: source.label },
+    });
 
   const Icon = SOURCE_ICON[source.id] ?? Camera;
-  const statusClass = STATUS_STYLES[source.status] ?? STATUS_STYLES.offline;
-  const style = transform ? { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.7 : 1 } : undefined;
+  const dotClass = STATUS_DOT[source.status] ?? STATUS_DOT.offline;
+  const pillClass = STATUS_PILL[source.status] ?? STATUS_PILL.offline;
+
+  const style = transform
+    ? {
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0.7 : 1,
+      }
+    : undefined;
 
   return (
-    <div
+    <button
+      type="button"
       ref={setNodeRef}
       style={style}
-      {...listeners}
-      {...attributes}
-      className="source-item px-3 py-2 flex items-center gap-2 cursor-grab active:cursor-grabbing"
-      title="Drag onto a display panel"
+      onClick={() => onSelect?.(source.src)}
+      className={`source-item flex-1 flex items-center gap-2 rounded-md px-2 py-1 lg:px-3 lg:py-2 cursor-pointer ${
+        selected ? "ring-2 ring-teal-400 ring-offset-2 ring-offset-slate-900" : ""
+      }`}
+      title="Click to select, drag from handle to a panel"
     >
-      <GripVertical className="h-4 w-4 text-subtle" aria-hidden />
-      <Icon className="h-4 w-4 shrink-0" aria-hidden />
-      <span className="truncate flex-1 text-default">{source.label}</span>
-      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${statusClass}`}>{source.status}</span>
-    </div>
+      {/* Drag handle – only this part starts the drag */}
+      <span
+        {...listeners}
+        {...attributes}
+        className="hidden lg:inline-flex h-4 w-4 items-center justify-center text-subtle cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical className="h-4 w-4" aria-hidden />
+      </span>
+
+      {/* On mobile we don’t show handle separately, drag isn’t critical there */}
+      <span className="lg:hidden">
+        <Icon className="h-5 w-5 shrink-0" aria-hidden />
+      </span>
+
+      {/* Icon again for desktop, next to handle */}
+      <span className="hidden lg:inline-flex">
+        <Icon className="h-5 w-5 shrink-0" aria-hidden />
+      </span>
+
+      {/* Label – desktop only */}
+      <span className="hidden lg:inline-flex flex-1 text-sm text-default truncate">
+        {source.label}
+      </span>
+
+      {/* Mobile: status dot */}
+      <span
+        className={`block lg:hidden h-2.5 w-2.5 rounded-full ${dotClass}`}
+        aria-hidden
+      />
+
+      {/* Desktop: status pill */}
+      <span
+        className={`hidden lg:inline-flex text-[10px] px-2 py-0.5 rounded-full border ${pillClass}`}
+      >
+        {source.status}
+      </span>
+    </button>
   );
 }
 
-export default function Sidebar({ role }) {
+export default function Sidebar({ role, selectedSource, onSelectSource }) {
   const sources = [
     { id: "endoscope", label: "Endoscope", src: "endoscope.mp4", status: "live" },
     { id: "microscope", label: "Microscope", src: "microscope.mp4", status: "offline" },
     { id: "ptz", label: "PTZ Camera", src: "ptz.mp4", status: "muted" },
-    { id: "monitor", label: "Monitor Capture", src: "vital_signs.mp4", status: "live" },
+    {
+      id: "monitor",
+      label: "Monitor Capture",
+      src: "vital_signs.mp4",
+      status: "live",
+    },
   ];
 
   return (
-    <aside className="sources-panel w-64 p-4 rounded-xl h-full overflow-y-auto">
-      <h2 className="text-lg font-semibold mb-4 inline-flex items-center gap-2 text-default">
-        <ArrowLeftRight className="h-5 w-5" aria-hidden />
-        <span>Sources</span>
-      </h2>
+    <aside className="sources-panel w-full rounded-xl px-2 py-2 lg:px-3 lg:py-3 flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ArrowLeftRight className="h-5 w-5 text-default" aria-hidden />
+          <h2 className="text-sm lg:text-base font-semibold text-default">
+            Sources
+          </h2>
+        </div>
+      </div>
 
       {role === "viewer" ? (
         <p className="text-sm text-subtle">Viewing only</p>
       ) : (
-        <div className="space-y-2">
+        <div className="flex gap-2 lg:flex-col">
           {sources.map((s) => (
-            <DraggableSource key={s.id} source={s} />
+            <DraggableSource
+              key={s.id}
+              source={s}
+              selected={selectedSource === s.src}
+              onSelect={onSelectSource}
+            />
           ))}
         </div>
       )}

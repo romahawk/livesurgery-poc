@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body, #root {
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 /* -------------------- THEME TOKENS -------------------- */
 @layer base {
   /* LIGHT */
@@ -152,6 +159,7 @@
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: 0.75rem;
+    display: block;
   }
   html.dark .theme-panel {
     box-shadow: 0 1px 0 rgba(255,255,255,0.02), 0 8px 24px rgba(0,0,0,0.35);
@@ -223,6 +231,28 @@
     border-color: #44526a;
   }
 
+  /* MOBILE: horizontal bar */
+  @media (max-width: 1023px) {
+    .sources-panel {
+      display: flex;
+      flex-direction: row;
+      gap: .5rem;
+      overflow-x: auto;
+      width: 100%;
+      max-height: 140px;
+    }
+  }
+
+  /* DESKTOP: vertical sidebar */
+  @media (min-width: 1024px) {
+    .sources-panel {
+      display: flex;
+      flex-direction: column;
+      width: 16rem; /* 64 */
+      max-height: none;
+    }
+  }
+
   /* TABS (Live / Archive / Analytics) */
   .tab-pill {
     background: var(--elev);
@@ -242,6 +272,11 @@
   .tab-pill:focus-visible {
     outline: none;
     box-shadow: 0 0 0 3px rgba(96,165,250,.35);
+  }
+
+  .display-grid {
+    height: 100%;
+    min-height: 0; /* critical for flex children */
   }
 
   /* GUIDE chip */
@@ -307,6 +342,38 @@
     border-color: var(--btn-stop-border);
   }
   .btn-stop:hover { background: var(--btn-stop-bg-hover); }
+}
+
+/* Make primary .btn controls smaller on mobile (Start / Pause / Stop) */
+@media (max-width: 640px) {
+  .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.78rem;
+  }
+  .btn svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Slide-over panels for Patient Info / Live Chat */
+.ls-slide-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(15, 23, 42, 0.6); /* slate-900 with alpha */
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ls-slide-panel {
+  height: 100%;
+  width: min(100%, 24rem); /* full width on very small phones */
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.5);
+  transform: translateX(0);
+  transition: transform 0.2s ease-out;
 }
 
 /* -------------------- OPTIONAL HELPERS -------------------- */
