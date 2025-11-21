@@ -155,7 +155,7 @@ export default function Navbar({
   );
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-surface/90 backdrop-blur relative">
+    <header className="sticky top-0 z-40 w-full border-b bg-surface/90 backdrop-blur">
       <div
         className="absolute inset-x-0 top-0 h-[3px]"
         style={{ background: "var(--ls-teal, #15B8A6)" }}
