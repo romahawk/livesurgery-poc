@@ -3,8 +3,8 @@ import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import DisplayGrid from "./components/DisplayGrid";
 import SessionControls from "./components/SessionControls";
-import PatientInfoPanel, { PatientInfoButton } from "./components/PatientInfoPanel";
-import LiveChatPanel, { LiveChatButton } from "./components/LiveChatPanel";
+import PatientInfoPanel from "./components/PatientInfoPanel";
+import LiveChatPanel from "./components/LiveChatPanel";
 import ArchiveTab from "./components/ArchiveTab";
 import AnalyticsTab from "./components/AnalyticsTab";
 import OnboardingModal from "./components/OnboardingModal";
@@ -37,25 +37,8 @@ export default function App() {
   const [sessionStatus, setSessionStatus] = useState("idle");
   const [chatMessages, setChatMessages] = useState([]);
 
-  const [archiveSessions] = useState([
-    {
-      id: 1,
-      surgeon: "Dr. Ivanov",
-      procedure: "Laparoscopic Cholecystectomy",
-      date: "2025-08-10",
-      duration: "01:45:00",
-    },
-    {
-      id: 2,
-      surgeon: "Dr. Müller",
-      procedure: "Neurosurgical Debridement",
-      date: "2025-08-09",
-      duration: "02:15:00",
-    },
-  ]);
-
   const [gridSources, setGridSources] = useState([null, null, null, null]);
-  const [selectedSource, setSelectedSource] = useState(null); // src filename or null
+  const [selectedSource, setSelectedSource] = useState(null);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
@@ -81,28 +64,24 @@ export default function App() {
 
     const activeData = active.data.current || {};
     const overData = over.data.current || {};
-
     const targetIndex = overData.panelIndex;
     if (typeof targetIndex !== "number") return;
 
     setGridSources((prev) => {
       const next = [...prev];
 
-      // 1) Drag from sidebar into panel
+      // from sidebar → panel
       if (activeData.src && active.id.toString().startsWith("src-")) {
         const src = activeData.src;
-
-        // keep each source unique: remove from previous slot if exists
         const prevIndex = next.findIndex((s) => s === src);
         if (prevIndex !== -1 && prevIndex !== targetIndex) {
           next[prevIndex] = null;
         }
-
         next[targetIndex] = src;
         return next;
       }
 
-      // 2) Drag between panels to rearrange
+      // between panels
       if (typeof activeData.panelIndex === "number") {
         const from = activeData.panelIndex;
         const to = targetIndex;
@@ -117,25 +96,21 @@ export default function App() {
     });
   };
 
-    // CLICK: select source in sidebar (always move highlight)
+  // select source in sidebar
   const handleSelectSource = (src) => {
     setSelectedSource(src);
   };
 
-
-  // CLICK: choose panel for selected source
+  // click empty panel to place selected source
   const handlePanelClick = (index) => {
     if (!selectedSource) return;
 
     setGridSources((prev) => {
       const next = [...prev];
-
-      // keep source unique in matrix
       const prevIndex = next.findIndex((s) => s === selectedSource);
       if (prevIndex !== -1 && prevIndex !== index) {
         next[prevIndex] = null;
       }
-
       next[index] = selectedSource;
       return next;
     });
@@ -146,7 +121,7 @@ export default function App() {
   const handlePause = () => setSessionStatus("paused");
   const handleStop = () => setSessionStatus("stopped");
 
-  // keyboard shortcuts (s / p / x / i / c) – ignore when typing
+  // keyboard shortcuts
   useEffect(() => {
     const isTyping = () => {
       const el = document.activeElement;
@@ -188,8 +163,8 @@ export default function App() {
         showGuidePulse={!hasOnboarded}
       />
 
-      {/* Mobile side buttons – bottom-right */}
-      <div className="fixed right-3 bottom-3 z-30 flex flex-col gap-2 lg:hidden">
+      {/* Patient Info & Chat – floating bottom-right for ALL breakpoints */}
+      <div className="fixed right-3 bottom-3 z-30 flex flex-col gap-2">
         <button
           type="button"
           onClick={() => setShowPatientInfoPanel(true)}
@@ -216,49 +191,38 @@ export default function App() {
         </button>
       </div>
 
-      {/* MAIN SHELL */}
-      <main className="flex-1 w-full px-4 py-4 sm:py-6">
+      {/* MAIN */}
+      <main className="flex-1 w-full px-4 py-4 sm:py-6 flex flex-col min-h-0 overflow-hidden">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex flex-col lg:flex-row gap-4 h-full min-h-[480px]">
-            {/* Sources – horizontal on mobile, sidebar on desktop */}
-            <Sidebar
-              role={role}
-              selectedSource={selectedSource}
-              onSelectSource={handleSelectSource}
-            />
-
-            {/* Content */}
-            <div className="flex-1 theme-panel p-3 sm:p-4 shadow relative flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="theme-panel p-3 sm:p-4 shadow flex flex-col gap-4 flex-1 min-h-0">
               {currentTab === "Live" && (
                 <>
-                  <SessionControls
-                    onStart={handleStart}
-                    onPause={handlePause}
-                    onStop={handleStop}
-                    status={sessionStatus}
-                  />
-
-                  {/* Patient / Chat buttons – desktop only */}
-                  <div className="hidden lg:flex flex-wrap justify-end gap-2 my-3">
-                    <PatientInfoButton
-                      onClick={() => setShowPatientInfoPanel(true)}
-                      hasUnsaved={patientHasUnsaved}
-                    />
-                    <LiveChatButton
-                      unread={unreadCount}
-                      onClick={() => {
-                        setShowChatPanel(true);
-                        setUnreadCount(0);
-                      }}
-                    />
+                  {/* TOP ROW: Sources (2/3) + Session controls (1/3) */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                    <div className="lg:col-span-2">
+                      <Sidebar
+                        role={role}
+                        selectedSource={selectedSource}
+                        onSelectSource={handleSelectSource}
+                      />
+                    </div>
+                    <div>
+                      <SessionControls
+                        onStart={handleStart}
+                        onPause={handlePause}
+                        onStop={handleStop}
+                        status={sessionStatus}
+                      />
+                    </div>
                   </div>
 
-                  {/* 2×2 grid fills remaining height */}
-                  <div className="flex-1 min-h-0">
+                  {/* GRID */}
+                  <div className="flex-1 min-h-[260px] lg:min-h-0">
                     <DisplayGrid
                       gridSources={gridSources}
                       setGridSources={setGridSources}
@@ -268,77 +232,11 @@ export default function App() {
                   </div>
                 </>
               )}
-
-              {currentTab === "Archive" && (
-                <ArchiveTab sessions={archiveSessions} />
-              )}
-
+              {currentTab === "Archive" && <ArchiveTab />}
               {currentTab === "Analytics" && <AnalyticsTab />}
             </div>
           </div>
         </DndContext>
-
-        {/* Patient Info – slide from right */}
-        {showPatientInfoPanel && (
-          <div
-            className="ls-slide-overlay"
-            onClick={() => setShowPatientInfoPanel(false)}
-          >
-            <div
-              className="ls-slide-panel"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <PatientInfoPanel
-                role={role}
-                patientInfo={patientInfo}
-                onUpdate={(info) => {
-                  setPatientInfo(info);
-                  setPatientHasUnsaved(false);
-                  try {
-                    localStorage.setItem("ls_onboarded", "1");
-                    setHasOnboarded(true);
-                  } catch {}
-                }}
-                onClose={() => setShowPatientInfoPanel(false)}
-                onDirtyChange={setPatientHasUnsaved}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Live Chat – slide from right */}
-        {showChatPanel && (
-          <div
-            className="ls-slide-overlay"
-            onClick={() => {
-              setShowChatPanel(false);
-              setUnreadCount(0);
-            }}
-          >
-            <div
-              className="ls-slide-panel"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <LiveChatPanel
-                role={role}
-                messages={chatMessages}
-                onSendMessage={(text) => {
-                  const msg = { sender: role, text };
-                  setChatMessages((prev) => [...prev, msg]);
-                  if (!showChatPanel) setUnreadCount((n) => n + 1);
-                  try {
-                    localStorage.setItem("ls_onboarded", "1");
-                    setHasOnboarded(true);
-                  } catch {}
-                }}
-                onClose={() => {
-                  setShowChatPanel(false);
-                  setUnreadCount(0);
-                }}
-              />
-            </div>
-          </div>
-        )}
       </main>
 
       {showOnboarding && (
