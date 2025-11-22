@@ -52,7 +52,7 @@ export default function DisplayGrid({
     } = useDraggable({
       id: `panel-drag-${index}`,
       data: { panelIndex: index },
-      disabled: !src, // draggable only when filled
+      disabled: !src, // only draggable when filled
     });
 
     const style = transform
@@ -81,9 +81,12 @@ export default function DisplayGrid({
         {...attributes}
         onClick={handlePanelClick}
         onDoubleClick={(e) => src && toggleFullscreen(e.currentTarget)}
-        className={`relative rounded-xl flex items-center justify-center border-2 border-dashed transition theme-panel ${
-          isOver ? "border-blue-400 bg-blue-50" : ""
-        } ${src ? "cursor-move" : selectedSource ? "cursor-pointer" : "cursor-default"}`}
+        className={`
+          relative rounded-xl flex items-center justify-center border-2 border-dashed transition theme-panel
+          ${isOver ? "border-blue-400 bg-blue-50" : ""}
+          ${src ? "cursor-move" : selectedSource ? "cursor-pointer" : "cursor-default"}
+          min-h-[120px] sm:min-h-[160px] lg:min-h-0 lg:h-full
+        `}
       >
         {src ? (
           <>
@@ -106,7 +109,7 @@ export default function DisplayGrid({
               }
             />
 
-            {/* Toolbar – stop pointer from starting drag */}
+            {/* Toolbar */}
             <div className="absolute top-2 right-2 flex gap-1">
               <button
                 onPointerDown={(e) => e.stopPropagation()}
@@ -140,7 +143,9 @@ export default function DisplayGrid({
           <div className="flex flex-col items-center text-subtle pointer-events-none select-none px-2 text-xs sm:text-sm">
             <LayoutDashboard className="h-5 w-5 mb-1" aria-hidden />
             <span>
-              {selectedSource ? "Tap to place selected source" : "Drop Source Here"}
+              {selectedSource
+                ? "Tap to place selected source"
+                : "Drop Source Here"}
             </span>
           </div>
         )}
@@ -149,7 +154,7 @@ export default function DisplayGrid({
   };
 
   return (
-    <div className="h-full min-h-[280px] sm:min-h-[360px] grid grid-cols-2 gap-3 sm:gap-4 [grid-template-rows:1fr_1fr]">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 h-auto lg:h-full lg:min-h-0 lg:[grid-template-rows:1fr_1fr]">
       {gridSources.map((src, index) => (
         <Panel key={index} src={src} index={index} />
       ))}
