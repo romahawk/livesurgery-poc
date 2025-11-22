@@ -16,3 +16,20 @@
   border: 1px solid var(--border);
   border-radius: 0.75rem;
 }
+
+/* Desktop Live grid: keep 2×2 display inside the viewport */
+@media (min-width: 1024px) {
+  .ls-live-grid-shell {
+    width: 100%;
+    /* 
+      Take only the remaining viewport height under:
+      navbar + tabs + sources bar + session controls + paddings.
+      260px is a safe starting offset – tweak up/down if needed.
+    */
+    height: calc(100vh - 310px);
+    max-height: calc(100vh - 310px);
+
+    /* Prevent the grid inside from pushing the page */
+    overflow: hidden;
+  }
+}

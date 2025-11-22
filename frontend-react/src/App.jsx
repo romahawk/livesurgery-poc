@@ -3,8 +3,8 @@ import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import DisplayGrid from "./components/DisplayGrid";
 import SessionControls from "./components/SessionControls";
-import PatientInfoPanel, { PatientInfoButton } from "./components/PatientInfoPanel";
-import LiveChatPanel, { LiveChatButton } from "./components/LiveChatPanel";
+import PatientInfoPanel from "./components/PatientInfoPanel";
+import LiveChatPanel from "./components/LiveChatPanel";
 import ArchiveTab from "./components/ArchiveTab";
 import AnalyticsTab from "./components/AnalyticsTab";
 import OnboardingModal from "./components/OnboardingModal";
@@ -55,7 +55,7 @@ export default function App() {
   ]);
 
   const [gridSources, setGridSources] = useState([null, null, null, null]);
-  const [selectedSource, setSelectedSource] = useState(null); // src filename or null
+  const [selectedSource, setSelectedSource] = useState(null);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
@@ -69,7 +69,9 @@ export default function App() {
         const t = setTimeout(() => setShowOnboarding(true), 400);
         return () => clearTimeout(t);
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
   }, []);
 
   // drag & drop sensors
@@ -81,28 +83,24 @@ export default function App() {
 
     const activeData = active.data.current || {};
     const overData = over.data.current || {};
-
     const targetIndex = overData.panelIndex;
     if (typeof targetIndex !== "number") return;
 
     setGridSources((prev) => {
       const next = [...prev];
 
-      // 1) Drag from sidebar into panel
+      // from sidebar → panel
       if (activeData.src && active.id.toString().startsWith("src-")) {
         const src = activeData.src;
-
-        // keep each source unique: remove from previous slot if exists
         const prevIndex = next.findIndex((s) => s === src);
         if (prevIndex !== -1 && prevIndex !== targetIndex) {
           next[prevIndex] = null;
         }
-
         next[targetIndex] = src;
         return next;
       }
 
-      // 2) Drag between panels to rearrange
+      // between panels
       if (typeof activeData.panelIndex === "number") {
         const from = activeData.panelIndex;
         const to = targetIndex;
@@ -117,7 +115,7 @@ export default function App() {
     });
   };
 
-  // CLICK: select source in sidebar (always move highlight)
+  // CLICK: select source in sidebar
   const handleSelectSource = (src) => {
     setSelectedSource(src);
   };
@@ -128,13 +126,10 @@ export default function App() {
 
     setGridSources((prev) => {
       const next = [...prev];
-
-      // keep source unique in matrix
       const prevIndex = next.findIndex((s) => s === selectedSource);
       if (prevIndex !== -1 && prevIndex !== index) {
         next[prevIndex] = null;
       }
-
       next[index] = selectedSource;
       return next;
     });
@@ -145,7 +140,7 @@ export default function App() {
   const handlePause = () => setSessionStatus("paused");
   const handleStop = () => setSessionStatus("stopped");
 
-  // keyboard shortcuts (s / p / x / i / c) – ignore when typing
+  // keyboard shortcuts
   useEffect(() => {
     const isTyping = () => {
       const el = document.activeElement;
@@ -187,8 +182,8 @@ export default function App() {
         showGuidePulse={!hasOnboarded}
       />
 
-      {/* Mobile side buttons – bottom-right */}
-      <div className="fixed right-3 bottom-3 z-30 flex flex-col gap-2 lg:hidden">
+      {/* Patient Info & Chat – floating bottom-right on all breakpoints */}
+      <div className="fixed right-3 bottom-3 z-30 flex flex-col gap-2">
         <button
           type="button"
           onClick={() => setShowPatientInfoPanel(true)}
@@ -215,19 +210,19 @@ export default function App() {
         </button>
       </div>
 
-      {/* MAIN SHELL */}
+      {/* MAIN */}
       <main className="flex-1 w-full px-4 py-4 sm:py-6">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          {/* Outer layout */}
-          <div className="flex flex-col gap-4 h-full min-h-[480px]">
-            {/* LIVE tab: sources (2/3) + session (1/3) in one row on desktop */}
+          {/* ===== Desktop layout (lg+) ===== */}
+          <div className="hidden lg:flex flex-col gap-4 h-full min-h-[480px]">
+            {/* LIVE – Sources + Session + Grid */}
             {currentTab === "Live" && (
               <>
-                {/* Header row */}
+                {/* Header row: Sources (2/3) + Session (1/3) */}
                 <div className="grid gap-4 lg:grid-cols-3 items-stretch">
                   {/* Sources – 2/3 */}
                   <div className="lg:col-span-2">
@@ -238,7 +233,7 @@ export default function App() {
                     />
                   </div>
 
-                  {/* Session – 1/3 (same height as Sources) */}
+                  {/* Session – 1/3 */}
                   <div className="lg:col-span-1 theme-panel p-3 sm:p-4 shadow flex flex-col justify-center">
                     <SessionControls
                       onStart={handleStart}
@@ -249,25 +244,9 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Patient / chat + 2×2 grid below, full width */}
+                {/* 2×2 display grid – viewport-bounded */}
                 <div className="theme-panel p-3 sm:p-4 shadow flex flex-col flex-1 min-h-0 mt-4">
-                  {/* Patient / Chat buttons */}
-                  <div className="hidden lg:flex flex-wrap justify-end gap-2 mb-3">
-                    <PatientInfoButton
-                      onClick={() => setShowPatientInfoPanel(true)}
-                      hasUnsaved={patientHasUnsaved}
-                    />
-                    <LiveChatButton
-                      unread={unreadCount}
-                      onClick={() => {
-                        setShowChatPanel(true);
-                        setUnreadCount(0);
-                      }}
-                    />
-                  </div>
-
-                  {/* 2×2 display grid */}
-                  <div className="flex-1 min-h-0">
+                  <div className="ls-live-grid-shell">
                     <DisplayGrid
                       gridSources={gridSources}
                       setGridSources={setGridSources}
@@ -279,30 +258,69 @@ export default function App() {
               </>
             )}
 
-            {/* Archive / Analytics tabs keep old layout */}
+            {/* ARCHIVE – no sources/session */}
             {currentTab === "Archive" && (
-              <div className="flex flex-col lg:flex-row gap-4">
-                <Sidebar
-                  role={role}
-                  selectedSource={selectedSource}
-                  onSelectSource={handleSelectSource}
-                />
-                <div className="flex-1 theme-panel p-3 sm:p-4 shadow">
-                  <ArchiveTab sessions={archiveSessions} />
-                </div>
+              <div className="theme-panel p-3 sm:p-4 shadow flex-1 min-h-0">
+                <ArchiveTab sessions={archiveSessions} />
               </div>
             )}
 
+            {/* ANALYTICS – no sources/session */}
             {currentTab === "Analytics" && (
-              <div className="flex flex-col lg:flex-row gap-4">
+              <div className="theme-panel p-3 sm:p-4 shadow flex-1 min-h-0">
+                <AnalyticsTab />
+              </div>
+            )}
+          </div>
+
+          {/* ===== Mobile / tablet (< lg) ===== */}
+          <div className="flex flex-col lg:hidden gap-4 h-full min-h-[480px]">
+            {/* LIVE – Sources + Session + Grid */}
+            {currentTab === "Live" && (
+              <>
+                {/* Sources bar */}
                 <Sidebar
                   role={role}
                   selectedSource={selectedSource}
                   onSelectSource={handleSelectSource}
                 />
-                <div className="flex-1 theme-panel p-3 sm:p-4 shadow">
-                  <AnalyticsTab />
+
+                {/* Session + Grid */}
+                <div className="flex-1 theme-panel p-3 sm:p-4 shadow relative flex flex-col min-h-0">
+                  {/* Session card */}
+                  <div className="theme-panel p-3 sm:p-4 mb-3">
+                    <SessionControls
+                      onStart={handleStart}
+                      onPause={handlePause}
+                      onStop={handleStop}
+                      status={sessionStatus}
+                    />
+                  </div>
+
+                  {/* 2×2 grid */}
+                  <div className="mt-3">
+                    <DisplayGrid
+                      gridSources={gridSources}
+                      setGridSources={setGridSources}
+                      selectedSource={selectedSource}
+                      onPanelClick={handlePanelClick}
+                    />
+                  </div>
                 </div>
+              </>
+            )}
+
+            {/* ARCHIVE – full-width card */}
+            {currentTab === "Archive" && (
+              <div className="flex-1 theme-panel p-3 sm:p-4 shadow flex flex-col min-h-0">
+                <ArchiveTab sessions={archiveSessions} />
+              </div>
+            )}
+
+            {/* ANALYTICS – full-width card */}
+            {currentTab === "Analytics" && (
+              <div className="flex-1 theme-panel p-3 sm:p-4 shadow flex flex-col min-h-0">
+                <AnalyticsTab />
               </div>
             )}
           </div>
@@ -327,7 +345,9 @@ export default function App() {
                   try {
                     localStorage.setItem("ls_onboarded", "1");
                     setHasOnboarded(true);
-                  } catch {}
+                  } catch {
+                    // ignore
+                  }
                 }}
                 onClose={() => setShowPatientInfoPanel(false)}
                 onDirtyChange={setPatientHasUnsaved}
@@ -359,7 +379,9 @@ export default function App() {
                   try {
                     localStorage.setItem("ls_onboarded", "1");
                     setHasOnboarded(true);
-                  } catch {}
+                  } catch {
+                    // ignore
+                  }
                 }}
                 onClose={() => {
                   setShowChatPanel(false);
