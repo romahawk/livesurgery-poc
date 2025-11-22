@@ -52,9 +52,13 @@ function DraggableSource({ source, selected, onSelect }) {
       ref={setNodeRef}
       style={style}
       onClick={() => onSelect?.(source.src)}
-      className={`source-item flex-1 flex items-center gap-2 rounded-md px-2 py-1 lg:px-3 lg:py-2 cursor-pointer ${
-        selected ? "ring-2 ring-teal-400 ring-offset-2 ring-offset-slate-900" : ""
-      }`}
+      className={`
+        flex items-center justify-between gap-2
+        rounded-lg border-default border px-3 py-2
+        theme-panel text-sm
+        w-full md:w-auto md:flex-none
+        ${selected ? "ring-2 ring-teal-400" : ""}
+    `}
       title="Click to select, drag from handle to a panel"
     >
       {/* Drag handle – only this part starts the drag */}
