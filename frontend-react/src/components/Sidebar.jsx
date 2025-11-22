@@ -124,7 +124,7 @@ export default function Sidebar({ role, selectedSource, onSelectSource }) {
       {role === "viewer" ? (
         <p className="text-sm text-subtle">Viewing only</p>
       ) : (
-        <div className="flex gap-2 lg:flex-col">
+        <div className="flex flex-wrap gap-2">
           {sources.map((s) => (
             <DraggableSource
               key={s.id}

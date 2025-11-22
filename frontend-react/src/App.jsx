@@ -117,11 +117,10 @@ export default function App() {
     });
   };
 
-    // CLICK: select source in sidebar (always move highlight)
+  // CLICK: select source in sidebar (always move highlight)
   const handleSelectSource = (src) => {
     setSelectedSource(src);
   };
-
 
   // CLICK: choose panel for selected source
   const handlePanelClick = (index) => {
@@ -223,27 +222,37 @@ export default function App() {
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex flex-col lg:flex-row gap-4 h-full min-h-[480px]">
-            {/* Sources – horizontal on mobile, sidebar on desktop */}
-            <Sidebar
-              role={role}
-              selectedSource={selectedSource}
-              onSelectSource={handleSelectSource}
-            />
+          {/* Outer layout */}
+          <div className="flex flex-col gap-4 h-full min-h-[480px]">
+            {/* LIVE tab: sources (2/3) + session (1/3) in one row on desktop */}
+            {currentTab === "Live" && (
+              <>
+                {/* Header row */}
+                <div className="grid gap-4 lg:grid-cols-3 items-stretch">
+                  {/* Sources – 2/3 */}
+                  <div className="lg:col-span-2">
+                    <Sidebar
+                      role={role}
+                      selectedSource={selectedSource}
+                      onSelectSource={handleSelectSource}
+                    />
+                  </div>
 
-            {/* Content */}
-            <div className="flex-1 theme-panel p-3 sm:p-4 shadow relative flex flex-col min-h-0">
-              {currentTab === "Live" && (
-                <>
-                  <SessionControls
-                    onStart={handleStart}
-                    onPause={handlePause}
-                    onStop={handleStop}
-                    status={sessionStatus}
-                  />
+                  {/* Session – 1/3 (same height as Sources) */}
+                  <div className="lg:col-span-1 theme-panel p-3 sm:p-4 shadow flex flex-col justify-center">
+                    <SessionControls
+                      onStart={handleStart}
+                      onPause={handlePause}
+                      onStop={handleStop}
+                      status={sessionStatus}
+                    />
+                  </div>
+                </div>
 
-                  {/* Patient / Chat buttons – desktop only */}
-                  <div className="hidden lg:flex flex-wrap justify-end gap-2 my-3">
+                {/* Patient / chat + 2×2 grid below, full width */}
+                <div className="theme-panel p-3 sm:p-4 shadow flex flex-col flex-1 min-h-0 mt-4">
+                  {/* Patient / Chat buttons */}
+                  <div className="hidden lg:flex flex-wrap justify-end gap-2 mb-3">
                     <PatientInfoButton
                       onClick={() => setShowPatientInfoPanel(true)}
                       hasUnsaved={patientHasUnsaved}
@@ -257,7 +266,7 @@ export default function App() {
                     />
                   </div>
 
-                  {/* 2×2 grid fills remaining height */}
+                  {/* 2×2 display grid */}
                   <div className="flex-1 min-h-0">
                     <DisplayGrid
                       gridSources={gridSources}
@@ -266,15 +275,36 @@ export default function App() {
                       onPanelClick={handlePanelClick}
                     />
                   </div>
-                </>
-              )}
+                </div>
+              </>
+            )}
 
-              {currentTab === "Archive" && (
-                <ArchiveTab sessions={archiveSessions} />
-              )}
+            {/* Archive / Analytics tabs keep old layout */}
+            {currentTab === "Archive" && (
+              <div className="flex flex-col lg:flex-row gap-4">
+                <Sidebar
+                  role={role}
+                  selectedSource={selectedSource}
+                  onSelectSource={handleSelectSource}
+                />
+                <div className="flex-1 theme-panel p-3 sm:p-4 shadow">
+                  <ArchiveTab sessions={archiveSessions} />
+                </div>
+              </div>
+            )}
 
-              {currentTab === "Analytics" && <AnalyticsTab />}
-            </div>
+            {currentTab === "Analytics" && (
+              <div className="flex flex-col lg:flex-row gap-4">
+                <Sidebar
+                  role={role}
+                  selectedSource={selectedSource}
+                  onSelectSource={handleSelectSource}
+                />
+                <div className="flex-1 theme-panel p-3 sm:p-4 shadow">
+                  <AnalyticsTab />
+                </div>
+              </div>
+            )}
           </div>
         </DndContext>
 
