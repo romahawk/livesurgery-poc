@@ -1,25 +1,55 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Clock4, Play, Pause, Square } from "lucide-react";
 
 export default function SessionControls({ onStart, onPause, onStop, status }) {
-  const [timer, setTimer] = useState(0);
-  const [intervalId, setIntervalId] = useState(null);
+  const [timer, setTimer] = useState(() => {
+    const savedStart = localStorage.getItem("ls_session_start");
+    const savedOffset = localStorage.getItem("ls_session_offset");
+
+    if (savedStart) {
+      // Session running earlier
+      const start = parseInt(savedStart, 10);
+      const offset = parseInt(savedOffset || "0", 10);
+      return Math.floor((Date.now() - start) / 1000) + offset;
+    }
+
+    return 0;
+  });
+
+  const intervalRef = useRef(null);
 
   useEffect(() => {
     if (status === "running") {
-      const id = setInterval(() => setTimer((prev) => prev + 1), 1000);
-      setIntervalId(id);
+      // If starting fresh, record the start time
+      if (!localStorage.getItem("ls_session_start")) {
+        localStorage.setItem("ls_session_start", Date.now().toString());
+        localStorage.setItem("ls_session_offset", timer.toString());
+      }
+
+      intervalRef.current = setInterval(() => {
+        const start = parseInt(localStorage.getItem("ls_session_start"), 10);
+        const offset = parseInt(localStorage.getItem("ls_session_offset"), 10);
+        const elapsed = Math.floor((Date.now() - start) / 1000) + offset;
+        setTimer(elapsed);
+      }, 1000);
     } else {
-      clearInterval(intervalId);
+      clearInterval(intervalRef.current);
     }
-    return () => clearInterval(intervalId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    return () => clearInterval(intervalRef.current);
   }, [status]);
+
+  const handleStop = () => {
+    onStop();
+    setTimer(0);
+    localStorage.removeItem("ls_session_start");
+    localStorage.removeItem("ls_session_offset");
+  };
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
   return (
@@ -34,9 +64,15 @@ export default function SessionControls({ onStart, onPause, onStop, status }) {
         <div className="flex flex-wrap gap-2 justify-end">
           <button
             className="btn btn-start"
-            onClick={onStart}
+            onClick={() => {
+              onStart();
+              // Record start timestamp only when session begins
+              if (!localStorage.getItem("ls_session_start")) {
+                localStorage.setItem("ls_session_start", Date.now().toString());
+                localStorage.setItem("ls_session_offset", "0");
+              }
+            }}
             disabled={status === "running"}
-            title="Start (S)"
           >
             <Play className="h-4 w-4" />
             Start
@@ -44,19 +80,19 @@ export default function SessionControls({ onStart, onPause, onStop, status }) {
 
           <button
             className="btn btn-pause"
-            onClick={onPause}
+            onClick={() => {
+              onPause();
+              // Save current time as offset for later resume
+              localStorage.setItem("ls_session_offset", timer.toString());
+              localStorage.removeItem("ls_session_start");
+            }}
             disabled={status !== "running"}
-            title="Pause (P)"
           >
             <Pause className="h-4 w-4" />
             Pause
           </button>
 
-          <button
-            className="btn btn-stop"
-            onClick={() => { onStop(); setTimer(0); }}
-            title="Stop (X)"
-          >
+          <button className="btn btn-stop" onClick={handleStop}>
             <Square className="h-4 w-4" />
             Stop
           </button>
