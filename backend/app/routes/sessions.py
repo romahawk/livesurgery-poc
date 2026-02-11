@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 
 from app.core.auth import Principal, Role, get_current_principal, require_roles
 from app.core.database import get_conn
@@ -14,6 +14,9 @@ from app.schemas.sessions import (
     SessionItem,
     UpdateParticipantRoleRequest,
 )
+from app.schemas.layouts import LayoutResponse, PublishLayoutRequest
+from app.services.layouts import get_latest_layout, publish_layout
+from app.services.realtime_hub import hub
 
 router = APIRouter(prefix="/v1/sessions", tags=["Sessions"])
 
@@ -50,6 +53,19 @@ def _get_session_or_404(session_id: str) -> dict:
     if not row:
         raise AppError("SESSION_NOT_FOUND", "Session not found", 404)
     return dict(row)
+
+
+def _ensure_membership(session_id: str, user_id: str) -> None:
+    with get_conn() as conn:
+        membership = conn.execute(
+            """
+            select 1 from session_participants
+            where session_id = ? and user_id = ?
+            """,
+            (session_id, user_id),
+        ).fetchone()
+    if not membership:
+        raise AppError("SESSION_NOT_FOUND", "Session not found", 404)
 
 
 def _to_item(row: dict) -> SessionItem:
@@ -128,16 +144,7 @@ def get_session(
     session_id: str,
     principal: Principal = Depends(get_current_principal),
 ):
-    with get_conn() as conn:
-        membership = conn.execute(
-            """
-            select 1 from session_participants
-            where session_id = ? and user_id = ?
-            """,
-            (session_id, principal.user_id),
-        ).fetchone()
-    if not membership:
-        raise AppError("SESSION_NOT_FOUND", "Session not found", 404)
+    _ensure_membership(session_id, principal.user_id)
     return _to_item(_get_session_or_404(session_id))
 
 
@@ -178,6 +185,7 @@ def end_session(
 @router.post("/{session_id}/participants:join")
 def join_session(
     session_id: str,
+    request: Request,
     principal: Principal = Depends(get_current_principal),
 ):
     _get_session_or_404(session_id)
@@ -195,9 +203,12 @@ def join_session(
             (session_id, principal.user_id, principal.role.value, now),
         )
 
+    ws_token = hub.mint_token(session_id=session_id, user_id=principal.user_id, role=principal.role.value)
+    ws_url = str(request.base_url).rstrip("/") + f"/ws/sessions/{session_id}"
+
     return {
         "participant": {"userId": principal.user_id, "role": principal.role.value},
-        "realtime": {"wsUrl": None, "token": None},
+        "realtime": {"wsUrl": ws_url, "token": ws_token},
         "media": {"sfuUrl": None, "token": None},
     }
 
@@ -228,3 +239,40 @@ def update_participant_role(
             (payload.role, session_id, user_id),
         )
     return {"participant": {"userId": user_id, "role": payload.role}}
+
+
+@router.get("/{session_id}/layout", response_model=LayoutResponse)
+def get_layout(
+    session_id: str,
+    principal: Principal = Depends(get_current_principal),
+):
+    _ensure_membership(session_id, principal.user_id)
+    version, layout = get_latest_layout(session_id)
+    return LayoutResponse(version=version, layout=layout)
+
+
+@router.post("/{session_id}/layout", response_model=dict)
+async def publish_layout_version(
+    session_id: str,
+    payload: PublishLayoutRequest,
+    principal: Principal = Depends(require_roles(Role.SURGEON, Role.ADMIN)),
+):
+    _ensure_membership(session_id, principal.user_id)
+    new_version = publish_layout(
+        session_id=session_id,
+        base_version=payload.baseVersion,
+        layout=payload.layout,
+        updated_by=principal.user_id,
+    )
+    await hub.broadcast(
+        session_id,
+        {
+            "type": "layout.updated",
+            "payload": {
+                "version": new_version,
+                "layout": payload.layout,
+                "updatedBy": principal.user_id,
+            },
+        },
+    )
+    return {"version": new_version}

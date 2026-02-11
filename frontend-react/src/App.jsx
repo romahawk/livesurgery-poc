@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import DisplayGrid from "./components/DisplayGrid";
@@ -8,7 +8,15 @@ import LiveChatPanel from "./components/LiveChatPanel";
 import ArchiveTab from "./components/ArchiveTab";
 import AnalyticsTab from "./components/AnalyticsTab";
 import OnboardingModal from "./components/OnboardingModal";
-import { createSession, endSession, listSessions, startSession } from "./api/sessions";
+import {
+  createSession,
+  endSession,
+  getLayout,
+  joinSession,
+  listSessions,
+  publishLayout,
+  startSession,
+} from "./api/sessions";
 
 import {
   DndContext,
@@ -19,6 +27,22 @@ import {
 } from "@dnd-kit/core";
 import { UserCircle, MessageCircle } from "lucide-react";
 
+const EMPTY_GRID = [null, null, null, null];
+
+function gridToLayout(gridSources) {
+  return {
+    panels: gridSources.map((src, idx) => ({
+      id: `p${idx + 1}`,
+      streamId: src ?? null,
+    })),
+  };
+}
+
+function layoutToGrid(layout) {
+  const panelMap = new Map((layout?.panels || []).map((p) => [p.id, p.streamId ?? null]));
+  return [1, 2, 3, 4].map((index) => panelMap.get(`p${index}`) ?? null);
+}
+
 export default function App() {
   const [role, setRole] = useState("surgeon");
   const [currentTab, setCurrentTab] = useState("Live");
@@ -27,7 +51,6 @@ export default function App() {
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const [patientHasUnsaved, setPatientHasUnsaved] = useState(false);
   const [patientInfo, setPatientInfo] = useState({
     name: "",
     id: "",
@@ -42,11 +65,29 @@ export default function App() {
   const [sessionsError, setSessionsError] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
 
-  const [gridSources, setGridSources] = useState([null, null, null, null]);
+  const [gridSources, setGridSources] = useState(EMPTY_GRID);
   const [selectedSource, setSelectedSource] = useState(null);
+  const [layoutVersion, setLayoutVersion] = useState(0);
+  const [layoutSyncError, setLayoutSyncError] = useState("");
+  const [presenceCount, setPresenceCount] = useState(0);
+  const [wsConnected, setWsConnected] = useState(false);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
+
+  const wsRef = useRef(null);
+  const layoutVersionRef = useRef(0);
+  const publishQueueRef = useRef(Promise.resolve());
+
+  useEffect(() => {
+    layoutVersionRef.current = layoutVersion;
+  }, [layoutVersion]);
+
+  const applyRemoteLayout = (version, layout) => {
+    layoutVersionRef.current = version;
+    setLayoutVersion(version);
+    setGridSources(layoutToGrid(layout));
+  };
 
   const refreshSessions = async (roleForRequest = role) => {
     setSessionsLoading(true);
@@ -78,6 +119,115 @@ export default function App() {
     refreshSessions(role);
   }, [role]);
 
+  useEffect(() => {
+    if (activeSessionId || sessions.length === 0) return;
+    const preferred = sessions.find((s) => s.status === "LIVE") || sessions[0];
+    setActiveSessionId(preferred.id);
+    if (preferred.status === "LIVE") setSessionStatus("running");
+  }, [sessions, activeSessionId]);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!activeSessionId) {
+        setWsConnected(false);
+        setPresenceCount(0);
+        return;
+      }
+      try {
+        const join = await joinSession(role, activeSessionId);
+        const layout = await getLayout(role, activeSessionId);
+        applyRemoteLayout(layout.version, layout.layout);
+
+        const wsBase = String(join?.realtime?.wsUrl || "").replace(/^http/i, "ws");
+        const wsToken = join?.realtime?.token;
+        if (!wsBase || !wsToken) return;
+
+        const ws = new WebSocket(`${wsBase}?token=${encodeURIComponent(wsToken)}`);
+        wsRef.current = ws;
+
+        ws.onopen = () => setWsConnected(true);
+        ws.onclose = () => setWsConnected(false);
+        ws.onerror = () => setWsConnected(false);
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            if (message.type === "layout.snapshot" || message.type === "layout.updated") {
+              const payload = message.payload || {};
+              applyRemoteLayout(payload.version || 0, payload.layout || { panels: [] });
+              setLayoutSyncError("");
+            } else if (message.type === "layout.conflict") {
+              const payload = message.payload || {};
+              applyRemoteLayout(payload.version || 0, payload.layout || { panels: [] });
+              setLayoutSyncError("Layout conflict resolved with latest server version.");
+            } else if (message.type === "presence.updated") {
+              setPresenceCount(Number(message?.payload?.participants || 0));
+            }
+          } catch {
+            // ignore malformed messages
+          }
+        };
+      } catch (err) {
+        setLayoutSyncError(err instanceof Error ? err.message : "Realtime sync unavailable.");
+      }
+    };
+
+    run();
+
+    return () => {
+      const ws = wsRef.current;
+      if (ws) ws.close();
+      wsRef.current = null;
+      setWsConnected(false);
+    };
+  }, [activeSessionId, role]);
+
+  const publishGridChange = async (previousGrid, nextGrid) => {
+    if (!activeSessionId || role === "viewer") return;
+    const baseVersion = layoutVersionRef.current;
+    try {
+      const response = await publishLayout(role, activeSessionId, baseVersion, gridToLayout(nextGrid));
+      const nextVersion = response?.version ?? baseVersion;
+      layoutVersionRef.current = nextVersion;
+      setLayoutVersion(nextVersion);
+      setLayoutSyncError("");
+    } catch (err) {
+      if ((err?.status === 409 || err?.code === "LAYOUT_VERSION_CONFLICT") && activeSessionId) {
+        try {
+          const latest = await getLayout(role, activeSessionId);
+          applyRemoteLayout(latest.version, latest.layout);
+          setLayoutSyncError("Layout conflict resolved with latest server version.");
+          return;
+        } catch {
+          // fall through to rollback
+        }
+      }
+      setGridSources(previousGrid);
+      setLayoutSyncError(err instanceof Error ? err.message : "Failed to sync layout.");
+    }
+  };
+
+  const queuePublish = (previousGrid, nextGrid) => {
+    publishQueueRef.current = publishQueueRef.current.then(() =>
+      publishGridChange(previousGrid, nextGrid)
+    );
+  };
+
+  const updateGridSources = (updater, { publish = true } = {}) => {
+    let previousSnapshot = null;
+    let nextSnapshot = null;
+    setGridSources((prev) => {
+      previousSnapshot = [...prev];
+      nextSnapshot = typeof updater === "function" ? updater(prev) : updater;
+      return nextSnapshot;
+    });
+
+    if (!publish) return;
+    Promise.resolve().then(() => {
+      if (!nextSnapshot || !previousSnapshot) return;
+      queuePublish(previousSnapshot, [...nextSnapshot]);
+    });
+  };
+
   const sensors = useSensors(useSensor(PointerSensor));
 
   const handleDragEnd = (event) => {
@@ -89,15 +239,13 @@ export default function App() {
     const targetIndex = overData.panelIndex;
     if (typeof targetIndex !== "number") return;
 
-    setGridSources((prev) => {
+    updateGridSources((prev) => {
       const next = [...prev];
 
       if (activeData.src && active.id.toString().startsWith("src-")) {
         const src = activeData.src;
         const prevIndex = next.findIndex((s) => s === src);
-        if (prevIndex !== -1 && prevIndex !== targetIndex) {
-          next[prevIndex] = null;
-        }
+        if (prevIndex !== -1 && prevIndex !== targetIndex) next[prevIndex] = null;
         next[targetIndex] = src;
         return next;
       }
@@ -122,13 +270,10 @@ export default function App() {
 
   const handlePanelClick = (index) => {
     if (!selectedSource) return;
-
-    setGridSources((prev) => {
+    updateGridSources((prev) => {
       const next = [...prev];
       const prevIndex = next.findIndex((s) => s === selectedSource);
-      if (prevIndex !== -1 && prevIndex !== index) {
-        next[prevIndex] = null;
-      }
+      if (prevIndex !== -1 && prevIndex !== index) next[prevIndex] = null;
       next[index] = selectedSource;
       return next;
     });
@@ -154,9 +299,7 @@ export default function App() {
 
   const handleStop = async () => {
     try {
-      if (activeSessionId) {
-        await endSession(role, activeSessionId);
-      }
+      if (activeSessionId) await endSession(role, activeSessionId);
       setSessionStatus("stopped");
       await refreshSessions(role);
     } catch (err) {
@@ -192,7 +335,7 @@ export default function App() {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeSessionId, role]);
+  });
 
   return (
     <div className="min-h-screen bg-surface text-default flex flex-col">
@@ -257,6 +400,13 @@ export default function App() {
                       onStop={handleStop}
                       status={sessionStatus}
                     />
+                    <div className="text-xs text-subtle px-1">
+                      <div>Session: {activeSessionId ? activeSessionId.slice(0, 8) : "none"}</div>
+                      <div>Layout: v{layoutVersion}</div>
+                      <div>Participants: {presenceCount}</div>
+                      <div>Realtime: {wsConnected ? "connected" : "offline"}</div>
+                    </div>
+                    {layoutSyncError && <div className="text-xs text-red-500 px-1 mt-1">{layoutSyncError}</div>}
                   </div>
                 </div>
 
@@ -264,7 +414,7 @@ export default function App() {
                   <div className="ls-live-grid-shell">
                     <DisplayGrid
                       gridSources={gridSources}
-                      setGridSources={setGridSources}
+                      setGridSources={updateGridSources}
                       selectedSource={selectedSource}
                       onPanelClick={handlePanelClick}
                     />
@@ -307,12 +457,17 @@ export default function App() {
                       onStop={handleStop}
                       status={sessionStatus}
                     />
+                    <div className="text-xs text-subtle px-1">
+                      <div>Layout: v{layoutVersion}</div>
+                      <div>Participants: {presenceCount}</div>
+                    </div>
+                    {layoutSyncError && <div className="text-xs text-red-500 px-1 mt-1">{layoutSyncError}</div>}
                   </div>
 
                   <div className="mt-3">
                     <DisplayGrid
                       gridSources={gridSources}
-                      setGridSources={setGridSources}
+                      setGridSources={updateGridSources}
                       selectedSource={selectedSource}
                       onPanelClick={handlePanelClick}
                     />
@@ -353,7 +508,6 @@ export default function App() {
                 patientInfo={patientInfo}
                 onUpdate={(info) => {
                   setPatientInfo(info);
-                  setPatientHasUnsaved(false);
                   try {
                     localStorage.setItem("ls_onboarded", "1");
                     setHasOnboarded(true);
@@ -362,7 +516,7 @@ export default function App() {
                   }
                 }}
                 onClose={() => setShowPatientInfoPanel(false)}
-                onDirtyChange={setPatientHasUnsaved}
+                onDirtyChange={() => {}}
               />
             </div>
           </div>

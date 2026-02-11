@@ -12,10 +12,17 @@ function devHeaders(role) {
 async function handleResponse(res) {
   if (!res.ok) {
     const payload = await res.json().catch(() => null);
-    const message = payload?.error?.message || `Request failed (${res.status})`;
-    throw new Error(message);
+    const error = new Error(payload?.error?.message || `Request failed (${res.status})`);
+    error.status = res.status;
+    error.code = payload?.error?.code || "UNKNOWN_ERROR";
+    error.requestId = payload?.error?.requestId;
+    throw error;
   }
   return res.json();
+}
+
+export function getApiBaseUrl() {
+  return API_BASE_URL;
 }
 
 export async function listSessions(role) {
@@ -47,6 +54,31 @@ export async function endSession(role, sessionId) {
   const res = await fetch(`${API_BASE_URL}/v1/sessions/${sessionId}/end`, {
     method: "POST",
     headers: devHeaders(role),
+  });
+  return handleResponse(res);
+}
+
+export async function joinSession(role, sessionId) {
+  const res = await fetch(`${API_BASE_URL}/v1/sessions/${sessionId}/participants:join`, {
+    method: "POST",
+    headers: devHeaders(role),
+  });
+  return handleResponse(res);
+}
+
+export async function getLayout(role, sessionId) {
+  const res = await fetch(`${API_BASE_URL}/v1/sessions/${sessionId}/layout`, {
+    method: "GET",
+    headers: devHeaders(role),
+  });
+  return handleResponse(res);
+}
+
+export async function publishLayout(role, sessionId, baseVersion, layout) {
+  const res = await fetch(`${API_BASE_URL}/v1/sessions/${sessionId}/layout`, {
+    method: "POST",
+    headers: devHeaders(role),
+    body: JSON.stringify({ baseVersion, layout }),
   });
   return handleResponse(res);
 }

@@ -51,6 +51,18 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            create table if not exists session_layouts (
+              session_id text not null references sessions(id),
+              version integer not null,
+              layout_json text not null,
+              updated_by text not null references users(id),
+              updated_at text not null,
+              primary key (session_id, version)
+            )
+            """
+        )
         conn.commit()
 
 
