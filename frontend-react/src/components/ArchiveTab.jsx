@@ -45,7 +45,17 @@ const SOURCE_ICON = {
   "Monitor Capture": Monitor,
 };
 
-export default function ArchiveTab() {
+const normalizeSession = (raw) => ({
+  id: raw.id,
+  surgeon: raw.surgeon || raw.createdBy || "N/A",
+  procedure: raw.procedure || raw.title || "Untitled Session",
+  date: raw.date || raw.updatedAt || raw.createdAt || new Date().toISOString(),
+  durationSec: Number.isFinite(raw.durationSec) ? raw.durationSec : 0,
+  sizeMB: Number.isFinite(raw.sizeMB) ? raw.sizeMB : 0,
+  sources: Array.isArray(raw.sources) ? raw.sources : [],
+});
+
+export default function ArchiveTab({ sessions = archiveSessions, loading = false, error = null }) {
   const [query, setQuery] = useState("");
   const [surgeon, setSurgeon] = useState("all");
   const [from, setFrom] = useState("");
@@ -54,13 +64,13 @@ export default function ArchiveTab() {
   const pageSize = 8;
 
   const surgeons = useMemo(
-    () => ["all", ...Array.from(new Set(archiveSessions.map((s) => s.surgeon)))],
-    []
+    () => ["all", ...Array.from(new Set(sessions.map((s) => normalizeSession(s).surgeon)))],
+    [sessions]
   );
 
   // filters
   const filtered = useMemo(() => {
-    let list = [...archiveSessions].sort((a, b) =>
+    let list = sessions.map(normalizeSession).sort((a, b) =>
       b.date.localeCompare(a.date)
     );
     if (query.trim()) {
@@ -83,7 +93,7 @@ export default function ArchiveTab() {
           new Date(to).getTime() + 86400000 - 1
       );
     return list;
-  }, [query, surgeon, from, to]);
+  }, [query, surgeon, from, to, sessions]);
 
   // kpis from filtered
   const kpis = useMemo(() => {
@@ -122,7 +132,9 @@ export default function ArchiveTab() {
           <Archive className="h-5 w-5" aria-hidden />
           <span>Session Archive</span>
         </h2>
+        {loading && <span className="text-xs text-subtle">Loading...</span>}
       </div>
+      {error && <div className="text-sm text-red-500">{error}</div>}
 
       {/* Filters */}
       <div className="theme-panel p-3 sm:p-4 space-y-3">

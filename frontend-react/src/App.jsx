@@ -8,6 +8,7 @@ import LiveChatPanel from "./components/LiveChatPanel";
 import ArchiveTab from "./components/ArchiveTab";
 import AnalyticsTab from "./components/AnalyticsTab";
 import OnboardingModal from "./components/OnboardingModal";
+import { createSession, endSession, listSessions, startSession } from "./api/sessions";
 
 import {
   DndContext,
@@ -35,24 +36,11 @@ export default function App() {
   });
 
   const [sessionStatus, setSessionStatus] = useState("idle");
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsError, setSessionsError] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
-
-  const [archiveSessions] = useState([
-    {
-      id: 1,
-      surgeon: "Dr. Ivanov",
-      procedure: "Laparoscopic Cholecystectomy",
-      date: "2025-08-10",
-      duration: "01:45:00",
-    },
-    {
-      id: 2,
-      surgeon: "Dr. Müller",
-      procedure: "Neurosurgical Debridement",
-      date: "2025-08-09",
-      duration: "02:15:00",
-    },
-  ]);
 
   const [gridSources, setGridSources] = useState([null, null, null, null]);
   const [selectedSource, setSelectedSource] = useState(null);
@@ -60,7 +48,19 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
 
-  // onboarding
+  const refreshSessions = async (roleForRequest = role) => {
+    setSessionsLoading(true);
+    setSessionsError("");
+    try {
+      const data = await listSessions(roleForRequest);
+      setSessions(data.items || []);
+    } catch (err) {
+      setSessionsError(err instanceof Error ? err.message : "Failed to load sessions");
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
   useEffect(() => {
     try {
       const seen = localStorage.getItem("ls_onboarded") === "1";
@@ -74,7 +74,10 @@ export default function App() {
     }
   }, []);
 
-  // drag & drop sensors
+  useEffect(() => {
+    refreshSessions(role);
+  }, [role]);
+
   const sensors = useSensors(useSensor(PointerSensor));
 
   const handleDragEnd = (event) => {
@@ -89,7 +92,6 @@ export default function App() {
     setGridSources((prev) => {
       const next = [...prev];
 
-      // from sidebar → panel
       if (activeData.src && active.id.toString().startsWith("src-")) {
         const src = activeData.src;
         const prevIndex = next.findIndex((s) => s === src);
@@ -100,7 +102,6 @@ export default function App() {
         return next;
       }
 
-      // between panels
       if (typeof activeData.panelIndex === "number") {
         const from = activeData.panelIndex;
         const to = targetIndex;
@@ -115,12 +116,10 @@ export default function App() {
     });
   };
 
-  // CLICK: select source in sidebar
   const handleSelectSource = (src) => {
     setSelectedSource(src);
   };
 
-  // CLICK: choose panel for selected source
   const handlePanelClick = (index) => {
     if (!selectedSource) return;
 
@@ -135,12 +134,36 @@ export default function App() {
     });
   };
 
-  // session controls
-  const handleStart = () => setSessionStatus("running");
-  const handlePause = () => setSessionStatus("paused");
-  const handleStop = () => setSessionStatus("stopped");
+  const handleStart = async () => {
+    try {
+      let sessionId = activeSessionId;
+      if (!sessionId) {
+        const created = await createSession(role, `Live Session ${new Date().toISOString()}`);
+        sessionId = created.id;
+        setActiveSessionId(sessionId);
+      }
+      await startSession(role, sessionId);
+      setSessionStatus("running");
+      await refreshSessions(role);
+    } catch (err) {
+      setSessionsError(err instanceof Error ? err.message : "Could not start session");
+    }
+  };
 
-  // keyboard shortcuts
+  const handlePause = () => setSessionStatus("paused");
+
+  const handleStop = async () => {
+    try {
+      if (activeSessionId) {
+        await endSession(role, activeSessionId);
+      }
+      setSessionStatus("stopped");
+      await refreshSessions(role);
+    } catch (err) {
+      setSessionsError(err instanceof Error ? err.message : "Could not stop session");
+    }
+  };
+
   useEffect(() => {
     const isTyping = () => {
       const el = document.activeElement;
@@ -169,7 +192,7 @@ export default function App() {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [activeSessionId, role]);
 
   return (
     <div className="min-h-screen bg-surface text-default flex flex-col">
@@ -182,7 +205,6 @@ export default function App() {
         showGuidePulse={!hasOnboarded}
       />
 
-      {/* Patient Info & Chat – floating bottom-right on all breakpoints */}
       <div className="fixed right-3 bottom-3 z-30 flex flex-col gap-2">
         <button
           type="button"
@@ -210,21 +232,16 @@ export default function App() {
         </button>
       </div>
 
-      {/* MAIN */}
       <main className="flex-1 w-full px-4 py-4 sm:py-6">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          {/* ===== Desktop layout (lg+) ===== */}
           <div className="hidden lg:flex flex-col gap-4 h-full min-h-[480px]">
-            {/* LIVE – Sources + Session + Grid */}
             {currentTab === "Live" && (
               <>
-                {/* Header row: Sources (2/3) + Session (1/3) */}
                 <div className="grid gap-4 lg:grid-cols-3 items-stretch">
-                  {/* Sources – 2/3 */}
                   <div className="lg:col-span-2">
                     <Sidebar
                       role={role}
@@ -233,7 +250,6 @@ export default function App() {
                     />
                   </div>
 
-                  {/* Session – 1/3 */}
                   <div className="lg:col-span-1 theme-panel p-3 sm:p-4 shadow flex flex-col justify-center">
                     <SessionControls
                       onStart={handleStart}
@@ -244,7 +260,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* 2×2 display grid – viewport-bounded */}
                 <div className="theme-panel p-3 sm:p-4 shadow flex flex-col flex-1 min-h-0 mt-4">
                   <div className="ls-live-grid-shell">
                     <DisplayGrid
@@ -258,14 +273,16 @@ export default function App() {
               </>
             )}
 
-            {/* ARCHIVE – no sources/session */}
             {currentTab === "Archive" && (
               <div className="theme-panel p-3 sm:p-4 shadow flex-1 min-h-0">
-                <ArchiveTab sessions={archiveSessions} />
+                <ArchiveTab
+                  sessions={sessions}
+                  loading={sessionsLoading}
+                  error={sessionsError}
+                />
               </div>
             )}
 
-            {/* ANALYTICS – no sources/session */}
             {currentTab === "Analytics" && (
               <div className="theme-panel p-3 sm:p-4 shadow flex-1 min-h-0">
                 <AnalyticsTab />
@@ -273,21 +290,16 @@ export default function App() {
             )}
           </div>
 
-          {/* ===== Mobile / tablet (< lg) ===== */}
           <div className="flex flex-col lg:hidden gap-4 h-full min-h-[480px]">
-            {/* LIVE – Sources + Session + Grid */}
             {currentTab === "Live" && (
               <>
-                {/* Sources bar */}
                 <Sidebar
                   role={role}
                   selectedSource={selectedSource}
                   onSelectSource={handleSelectSource}
                 />
 
-                {/* Session + Grid */}
                 <div className="flex-1 theme-panel p-3 sm:p-4 shadow relative flex flex-col min-h-0">
-                  {/* Session card */}
                   <div className="theme-panel p-3 sm:p-4 mb-3">
                     <SessionControls
                       onStart={handleStart}
@@ -297,7 +309,6 @@ export default function App() {
                     />
                   </div>
 
-                  {/* 2×2 grid */}
                   <div className="mt-3">
                     <DisplayGrid
                       gridSources={gridSources}
@@ -310,14 +321,16 @@ export default function App() {
               </>
             )}
 
-            {/* ARCHIVE – full-width card */}
             {currentTab === "Archive" && (
               <div className="flex-1 theme-panel p-3 sm:p-4 shadow flex flex-col min-h-0">
-                <ArchiveTab sessions={archiveSessions} />
+                <ArchiveTab
+                  sessions={sessions}
+                  loading={sessionsLoading}
+                  error={sessionsError}
+                />
               </div>
             )}
 
-            {/* ANALYTICS – full-width card */}
             {currentTab === "Analytics" && (
               <div className="flex-1 theme-panel p-3 sm:p-4 shadow flex flex-col min-h-0">
                 <AnalyticsTab />
@@ -326,7 +339,6 @@ export default function App() {
           </div>
         </DndContext>
 
-        {/* Patient Info – slide from right */}
         {showPatientInfoPanel && (
           <div
             className="ls-slide-overlay"
@@ -356,7 +368,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Live Chat – slide from right */}
         {showChatPanel && (
           <div
             className="ls-slide-overlay"
