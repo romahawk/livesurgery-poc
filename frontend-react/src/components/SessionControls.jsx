@@ -8,6 +8,7 @@ export default function SessionControls({
   status,
   canControl = true,
   readOnlyReason = "Only Surgeon/Admin can control the session.",
+  hideActions = false,
 }) {
   const [timer, setTimer] = useState(() => {
     const savedStart = localStorage.getItem("ls_session_start");
@@ -68,51 +69,56 @@ export default function SessionControls({
           <span>{formatTime(timer)}</span>
         </div>
 
-        <div className="flex flex-wrap gap-2 justify-end">
-          <button
-            className="btn btn-start"
-            onClick={() => {
-              if (!canControl) return;
-              onStart();
-              // Record start timestamp only when session begins
-              if (!localStorage.getItem("ls_session_start")) {
-                localStorage.setItem("ls_session_start", Date.now().toString());
-                localStorage.setItem("ls_session_offset", "0");
-              }
-            }}
-            disabled={!canControl || status === "running"}
-            title={!canControl ? readOnlyReason : "Start session"}
-          >
-            <Play className="h-4 w-4" />
-            Start
-          </button>
+        {!hideActions && (
+          <div className="flex flex-wrap gap-2 justify-end">
+            <button
+              className="btn btn-start"
+              onClick={() => {
+                if (!canControl) return;
+                onStart();
+                // Record start timestamp only when session begins
+                if (!localStorage.getItem("ls_session_start")) {
+                  localStorage.setItem("ls_session_start", Date.now().toString());
+                  localStorage.setItem("ls_session_offset", "0");
+                }
+              }}
+              disabled={!canControl || status === "running"}
+              title={!canControl ? readOnlyReason : "Start session"}
+            >
+              <Play className="h-4 w-4" />
+              Start
+            </button>
 
-          <button
-            className="btn btn-pause"
-            onClick={() => {
-              if (!canControl) return;
-              onPause();
-              // Save current time as offset for later resume
-              localStorage.setItem("ls_session_offset", timer.toString());
-              localStorage.removeItem("ls_session_start");
-            }}
-            disabled={!canControl || status !== "running"}
-            title={!canControl ? readOnlyReason : "Pause session"}
-          >
-            <Pause className="h-4 w-4" />
-            Pause
-          </button>
+            <button
+              className="btn btn-pause"
+              onClick={() => {
+                if (!canControl) return;
+                onPause();
+                // Save current time as offset for later resume
+                localStorage.setItem("ls_session_offset", timer.toString());
+                localStorage.removeItem("ls_session_start");
+              }}
+              disabled={!canControl || status !== "running"}
+              title={!canControl ? readOnlyReason : "Pause session"}
+            >
+              <Pause className="h-4 w-4" />
+              Pause
+            </button>
 
-          <button
-            className="btn btn-stop"
-            onClick={() => canControl && handleStop()}
-            disabled={!canControl}
-            title={!canControl ? readOnlyReason : "Stop session"}
-          >
-            <Square className="h-4 w-4" />
-            Stop
-          </button>
-        </div>
+            <button
+              className="btn btn-stop"
+              onClick={() => canControl && handleStop()}
+              disabled={!canControl}
+              title={!canControl ? readOnlyReason : "Stop session"}
+            >
+              <Square className="h-4 w-4" />
+              Stop
+            </button>
+          </div>
+        )}
+        {hideActions && !canControl && (
+          <div className="text-xs text-subtle">{readOnlyReason}</div>
+        )}
       </div>
     </div>
   );

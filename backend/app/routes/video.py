@@ -3,6 +3,7 @@ from app.services.video_stream import get_simulated_stream
 
 router = APIRouter()
 
+
 @router.get("/simulate")
 def simulate_stream():
     """

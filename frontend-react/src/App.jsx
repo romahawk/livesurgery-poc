@@ -82,6 +82,8 @@ export default function App() {
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [canUndoLayout, setCanUndoLayout] = useState(false);
+  const [followPresenter, setFollowPresenter] = useState(true);
+  const [queuedPresenterLayout, setQueuedPresenterLayout] = useState(null);
 
   const wsRef = useRef(null);
   const layoutVersionRef = useRef(0);
@@ -89,6 +91,7 @@ export default function App() {
   const toastSeqRef = useRef(0);
   const reconnectTimerRef = useRef(null);
   const layoutHistoryRef = useRef([]);
+  const followPresenterRef = useRef(followPresenter);
   const canControlSession = role !== "viewer";
   const canEditLayout = role !== "viewer";
   const syncLabel =
@@ -105,6 +108,10 @@ export default function App() {
       : wsState === "connecting" || wsState === "reconnecting"
         ? "text-amber-300"
         : "text-red-400";
+
+  useEffect(() => {
+    followPresenterRef.current = followPresenter;
+  }, [followPresenter]);
 
   useEffect(() => {
     layoutVersionRef.current = layoutVersion;
@@ -154,6 +161,13 @@ export default function App() {
 
   useEffect(() => {
     refreshSessions(role);
+  }, [role]);
+
+  useEffect(() => {
+    if (role !== "viewer") {
+      setFollowPresenter(true);
+      setQueuedPresenterLayout(null);
+    }
   }, [role]);
 
   useEffect(() => {
@@ -241,7 +255,13 @@ export default function App() {
             const message = JSON.parse(event.data);
             if (message.type === "layout.snapshot" || message.type === "layout.updated") {
               const payload = message.payload || {};
-              applyRemoteLayout(payload.version || 0, payload.layout || { panels: [] });
+              const nextRemote = { version: payload.version || 0, layout: payload.layout || { panels: [] } };
+              if (role === "viewer" && message.type === "layout.updated" && !followPresenterRef.current) {
+                setQueuedPresenterLayout(nextRemote);
+                return;
+              }
+              applyRemoteLayout(nextRemote.version, nextRemote.layout);
+              setQueuedPresenterLayout(null);
               setLayoutSyncError("");
             } else if (message.type === "layout.conflict") {
               const payload = message.payload || {};
@@ -483,6 +503,26 @@ export default function App() {
     handlePanelClick(panelIndex);
   };
 
+  const handleToggleFollowPresenter = () => {
+    if (role !== "viewer") return;
+    const next = !followPresenter;
+    setFollowPresenter(next);
+    if (next && queuedPresenterLayout) {
+      applyRemoteLayout(queuedPresenterLayout.version, queuedPresenterLayout.layout);
+      setQueuedPresenterLayout(null);
+      pushToast("success", "Synced to presenter layout");
+    } else {
+      pushToast("success", next ? "Presenter follow enabled" : "Presenter follow paused");
+    }
+  };
+
+  const handleSyncNow = () => {
+    if (!queuedPresenterLayout) return;
+    applyRemoteLayout(queuedPresenterLayout.version, queuedPresenterLayout.layout);
+    setQueuedPresenterLayout(null);
+    pushToast("success", "Synced latest presenter layout");
+  };
+
   useEffect(() => {
     const isTyping = () => {
       const el = document.activeElement;
@@ -597,6 +637,22 @@ export default function App() {
                     <span className="text-default">v{layoutVersion} ({layoutMode})</span>
                   </div>
                   {layoutSyncError && <div className="text-xs text-red-400 mt-1">{layoutSyncError}</div>}
+                  {role === "viewer" && (
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs border-default border rounded-md px-2 py-1">
+                      <span className="text-amber-300 font-medium">Read-only mode</span>
+                      <span className="text-subtle">You can observe but not control session/layout.</span>
+                      <button className="badge-btn text-xs" onClick={handleToggleFollowPresenter}>
+                        {followPresenter ? "Presenter follow: ON" : "Presenter follow: OFF"}
+                      </button>
+                      <button
+                        className="badge-btn text-xs"
+                        onClick={handleSyncNow}
+                        disabled={!queuedPresenterLayout}
+                      >
+                        Sync now
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="theme-panel p-2 border-default border">
@@ -621,46 +677,40 @@ export default function App() {
                     >
                       Join
                     </button>
-                    <button
-                      className="badge-btn text-xs"
-                      onClick={handleCreateSessionDraft}
-                      disabled={!canControlSession}
-                      title={!canControlSession ? "Viewer cannot create sessions." : "Create new draft session"}
-                    >
-                      New Session
-                    </button>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-subtle">Layout actions</span>
-                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("quad")} disabled={!canEditLayout}>
-                      Quad
-                    </button>
-                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("focus")} disabled={!canEditLayout}>
-                      Focus
-                    </button>
-                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("teaching")} disabled={!canEditLayout}>
-                      Teaching
-                    </button>
-                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("clear")} disabled={!canEditLayout}>
-                      Reset
-                    </button>
-                    <button className="badge-btn text-xs" onClick={handleUndoLayout} disabled={!canEditLayout || !canUndoLayout}>
-                      Undo
-                    </button>
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-subtle">Grid</span>
-                    {["2x2", "3x1", "1x3", "1x1"].map((mode) => (
+                    {canControlSession && (
                       <button
-                        key={mode}
-                        className={`badge-btn text-xs ${layoutMode === mode ? "ring-1 ring-teal-400" : ""}`}
-                        onClick={() => handleLayoutModeChange(mode)}
-                        disabled={!canEditLayout}
+                        className="badge-btn text-xs"
+                        onClick={handleCreateSessionDraft}
+                        title="Create new draft session"
                       >
-                        {mode}
+                        New Session
                       </button>
-                    ))}
+                    )}
                   </div>
+                  {canEditLayout && (
+                    <>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-subtle">Layout actions</span>
+                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("quad")}>Quad</button>
+                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("focus")}>Focus</button>
+                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("teaching")}>Teaching</button>
+                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("clear")}>Reset</button>
+                        <button className="badge-btn text-xs" onClick={handleUndoLayout} disabled={!canUndoLayout}>Undo</button>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-subtle">Grid</span>
+                        {["2x2", "3x1", "1x3", "1x1"].map((mode) => (
+                          <button
+                            key={mode}
+                            className={`badge-btn text-xs ${layoutMode === mode ? "ring-1 ring-teal-400" : ""}`}
+                            onClick={() => handleLayoutModeChange(mode)}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="grid gap-2 lg:grid-cols-3 items-stretch">
@@ -694,6 +744,7 @@ export default function App() {
                       status={sessionStatus}
                       canControl={canControlSession}
                       readOnlyReason="Viewer role cannot control the session."
+                      hideActions={!canControlSession}
                     />
                   </div>
                 </div>
@@ -765,32 +816,40 @@ export default function App() {
                     >
                       Join
                     </button>
-                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("quad")} disabled={!canEditLayout}>
-                      Quad
-                    </button>
-                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("focus")} disabled={!canEditLayout}>
-                      Focus
-                    </button>
-                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("teaching")} disabled={!canEditLayout}>
-                      Teaching
-                    </button>
-                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("clear")} disabled={!canEditLayout}>
-                      Reset
-                    </button>
-                    <button className="badge-btn text-xs" onClick={handleUndoLayout} disabled={!canEditLayout || !canUndoLayout}>
-                      Undo
-                    </button>
-                    {["2x2", "3x1", "1x3", "1x1"].map((mode) => (
-                      <button
-                        key={mode}
-                        className={`badge-btn text-xs ${layoutMode === mode ? "ring-1 ring-teal-400" : ""}`}
-                        onClick={() => handleLayoutModeChange(mode)}
-                        disabled={!canEditLayout}
-                      >
-                        {mode}
-                      </button>
-                    ))}
+                    {canEditLayout && (
+                      <>
+                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("quad")}>Quad</button>
+                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("focus")}>Focus</button>
+                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("teaching")}>Teaching</button>
+                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("clear")}>Reset</button>
+                        <button className="badge-btn text-xs" onClick={handleUndoLayout} disabled={!canUndoLayout}>Undo</button>
+                        {["2x2", "3x1", "1x3", "1x1"].map((mode) => (
+                          <button
+                            key={mode}
+                            className={`badge-btn text-xs ${layoutMode === mode ? "ring-1 ring-teal-400" : ""}`}
+                            onClick={() => handleLayoutModeChange(mode)}
+                          >
+                            {mode}
+                          </button>
+                        ))}
+                      </>
+                    )}
+                    {role === "viewer" && (
+                      <>
+                        <button className="badge-btn text-xs" onClick={handleToggleFollowPresenter}>
+                          {followPresenter ? "Follow ON" : "Follow OFF"}
+                        </button>
+                        <button className="badge-btn text-xs" onClick={handleSyncNow} disabled={!queuedPresenterLayout}>
+                          Sync now
+                        </button>
+                      </>
+                    )}
                   </div>
+                  {role === "viewer" && (
+                    <div className="mt-2 text-xs text-subtle">
+                      Read-only mode enabled. Presenter controls layout.
+                    </div>
+                  )}
                 </div>
 
                 <Sidebar
@@ -822,6 +881,7 @@ export default function App() {
                       status={sessionStatus}
                       canControl={canControlSession}
                       readOnlyReason="Viewer role cannot control the session."
+                      hideActions={!canControlSession}
                     />
                   </div>
 

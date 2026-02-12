@@ -203,7 +203,9 @@ def join_session(
             (session_id, principal.user_id, principal.role.value, now),
         )
 
-    ws_token = hub.mint_token(session_id=session_id, user_id=principal.user_id, role=principal.role.value)
+    ws_token = hub.mint_token(
+        session_id=session_id, user_id=principal.user_id, role=principal.role.value
+    )
     ws_url = str(request.base_url).rstrip("/") + f"/ws/sessions/{session_id}"
 
     return {
