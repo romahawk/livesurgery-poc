@@ -25,7 +25,7 @@ import {
   useSensors,
   closestCenter,
 } from "@dnd-kit/core";
-import { UserCircle, MessageCircle } from "lucide-react";
+import { UserCircle, MessageCircle, CheckCircle2, AlertCircle } from "lucide-react";
 
 const EMPTY_GRID = [null, null, null, null];
 
@@ -74,10 +74,14 @@ export default function App() {
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
+  const [toasts, setToasts] = useState([]);
 
   const wsRef = useRef(null);
   const layoutVersionRef = useRef(0);
   const publishQueueRef = useRef(Promise.resolve());
+  const toastSeqRef = useRef(0);
+  const canControlSession = role !== "viewer";
+  const canEditLayout = role !== "viewer";
 
   useEffect(() => {
     layoutVersionRef.current = layoutVersion;
@@ -87,6 +91,14 @@ export default function App() {
     layoutVersionRef.current = version;
     setLayoutVersion(version);
     setGridSources(layoutToGrid(layout));
+  };
+
+  const pushToast = (kind, message) => {
+    const id = `${Date.now()}-${toastSeqRef.current++}`;
+    setToasts((prev) => [...prev, { id, kind, message }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 2800);
   };
 
   const refreshSessions = async (roleForRequest = role) => {
@@ -145,9 +157,15 @@ export default function App() {
         const ws = new WebSocket(`${wsBase}?token=${encodeURIComponent(wsToken)}`);
         wsRef.current = ws;
 
-        ws.onopen = () => setWsConnected(true);
+        ws.onopen = () => {
+          setWsConnected(true);
+          pushToast("success", "Realtime connected");
+        };
         ws.onclose = () => setWsConnected(false);
-        ws.onerror = () => setWsConnected(false);
+        ws.onerror = () => {
+          setWsConnected(false);
+          pushToast("error", "Realtime connection issue");
+        };
         ws.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data);
@@ -159,6 +177,7 @@ export default function App() {
               const payload = message.payload || {};
               applyRemoteLayout(payload.version || 0, payload.layout || { panels: [] });
               setLayoutSyncError("Layout conflict resolved with latest server version.");
+              pushToast("warning", "Layout conflict resolved to latest version");
             } else if (message.type === "presence.updated") {
               setPresenceCount(Number(message?.payload?.participants || 0));
             }
@@ -168,6 +187,7 @@ export default function App() {
         };
       } catch (err) {
         setLayoutSyncError(err instanceof Error ? err.message : "Realtime sync unavailable.");
+        pushToast("error", "Realtime sync unavailable");
       }
     };
 
@@ -196,6 +216,7 @@ export default function App() {
           const latest = await getLayout(role, activeSessionId);
           applyRemoteLayout(latest.version, latest.layout);
           setLayoutSyncError("Layout conflict resolved with latest server version.");
+          pushToast("warning", "Layout conflict resolved with server state");
           return;
         } catch {
           // fall through to rollback
@@ -203,6 +224,7 @@ export default function App() {
       }
       setGridSources(previousGrid);
       setLayoutSyncError(err instanceof Error ? err.message : "Failed to sync layout.");
+      pushToast("error", "Layout sync failed");
     }
   };
 
@@ -269,6 +291,7 @@ export default function App() {
   };
 
   const handlePanelClick = (index) => {
+    if (!canEditLayout) return;
     if (!selectedSource) return;
     updateGridSources((prev) => {
       const next = [...prev];
@@ -280,6 +303,7 @@ export default function App() {
   };
 
   const handleStart = async () => {
+    if (!canControlSession) return;
     try {
       let sessionId = activeSessionId;
       if (!sessionId) {
@@ -290,21 +314,31 @@ export default function App() {
       await startSession(role, sessionId);
       setSessionStatus("running");
       await refreshSessions(role);
+      pushToast("success", "Session started");
     } catch (err) {
       setSessionsError(err instanceof Error ? err.message : "Could not start session");
+      pushToast("error", "Could not start session");
     }
   };
 
   const handlePause = () => setSessionStatus("paused");
 
   const handleStop = async () => {
+    if (!canControlSession) return;
     try {
       if (activeSessionId) await endSession(role, activeSessionId);
       setSessionStatus("stopped");
       await refreshSessions(role);
+      pushToast("success", "Session stopped");
     } catch (err) {
       setSessionsError(err instanceof Error ? err.message : "Could not stop session");
+      pushToast("error", "Could not stop session");
     }
+  };
+
+  const handleQuickAssign = (panelIndex) => {
+    if (!canEditLayout || !selectedSource) return;
+    handlePanelClick(panelIndex);
   };
 
   useEffect(() => {
@@ -376,6 +410,26 @@ export default function App() {
       </div>
 
       <main className="flex-1 w-full px-4 py-4 sm:py-6">
+        {toasts.length > 0 && (
+          <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm">
+            {toasts.map((toast) => (
+              <div
+                key={toast.id}
+                className={`theme-panel border-default border px-3 py-2 text-sm flex items-center gap-2 ${
+                  toast.kind === "error" ? "text-red-400" : toast.kind === "warning" ? "text-amber-300" : "text-emerald-300"
+                }`}
+              >
+                {toast.kind === "error" ? (
+                  <AlertCircle className="h-4 w-4" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
+                <span className="text-default">{toast.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -384,6 +438,27 @@ export default function App() {
           <div className="hidden lg:flex flex-col gap-4 h-full min-h-[480px]">
             {currentTab === "Live" && (
               <>
+                <div className="theme-panel p-2 sm:p-3 border-default border">
+                  <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                    <span className={`px-2 py-1 rounded-full border ${sessionStatus === "running" ? "text-emerald-300 border-emerald-500/40" : "text-amber-300 border-amber-500/40"}`}>
+                      {sessionStatus.toUpperCase()}
+                    </span>
+                    <span className="text-subtle">Role:</span>
+                    <span className="badge-btn">{role}</span>
+                    <span className="text-subtle">Session:</span>
+                    <span className="font-mono text-default">{activeSessionId ? activeSessionId.slice(0, 8) : "none"}</span>
+                    <span className="text-subtle">Participants:</span>
+                    <span className="text-default">{presenceCount}</span>
+                    <span className="text-subtle">Sync:</span>
+                    <span className={wsConnected ? "text-emerald-300" : "text-red-400"}>
+                      {wsConnected ? "Connected" : "Offline"}
+                    </span>
+                    <span className="text-subtle">Layout:</span>
+                    <span className="text-default">v{layoutVersion}</span>
+                  </div>
+                  {layoutSyncError && <div className="text-xs text-red-400 mt-1">{layoutSyncError}</div>}
+                </div>
+
                 <div className="grid gap-4 lg:grid-cols-3 items-stretch">
                   <div className="lg:col-span-2">
                     <Sidebar
@@ -391,6 +466,20 @@ export default function App() {
                       selectedSource={selectedSource}
                       onSelectSource={handleSelectSource}
                     />
+                    {selectedSource && canEditLayout && (
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-subtle">Assign selected source:</span>
+                        {[0, 1, 2, 3].map((idx) => (
+                          <button
+                            key={idx}
+                            className="badge-btn text-xs"
+                            onClick={() => handleQuickAssign(idx)}
+                          >
+                            P{idx + 1}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="lg:col-span-1 theme-panel p-3 sm:p-4 shadow flex flex-col justify-center">
@@ -399,14 +488,9 @@ export default function App() {
                       onPause={handlePause}
                       onStop={handleStop}
                       status={sessionStatus}
+                      canControl={canControlSession}
+                      readOnlyReason="Viewer role cannot control the session."
                     />
-                    <div className="text-xs text-subtle px-1">
-                      <div>Session: {activeSessionId ? activeSessionId.slice(0, 8) : "none"}</div>
-                      <div>Layout: v{layoutVersion}</div>
-                      <div>Participants: {presenceCount}</div>
-                      <div>Realtime: {wsConnected ? "connected" : "offline"}</div>
-                    </div>
-                    {layoutSyncError && <div className="text-xs text-red-500 px-1 mt-1">{layoutSyncError}</div>}
                   </div>
                 </div>
 
@@ -417,6 +501,7 @@ export default function App() {
                       setGridSources={updateGridSources}
                       selectedSource={selectedSource}
                       onPanelClick={handlePanelClick}
+                      readOnly={!canEditLayout}
                     />
                   </div>
                 </div>
@@ -443,11 +528,41 @@ export default function App() {
           <div className="flex flex-col lg:hidden gap-4 h-full min-h-[480px]">
             {currentTab === "Live" && (
               <>
+                <div className="theme-panel p-2 sm:p-3 border-default border">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className={`px-2 py-1 rounded-full border ${sessionStatus === "running" ? "text-emerald-300 border-emerald-500/40" : "text-amber-300 border-amber-500/40"}`}>
+                      {sessionStatus.toUpperCase()}
+                    </span>
+                    <span className="text-subtle">Sync:</span>
+                    <span className={wsConnected ? "text-emerald-300" : "text-red-400"}>
+                      {wsConnected ? "Connected" : "Offline"}
+                    </span>
+                    <span className="text-subtle">Participants:</span>
+                    <span className="text-default">{presenceCount}</span>
+                    <span className="text-subtle">Layout:</span>
+                    <span className="text-default">v{layoutVersion}</span>
+                  </div>
+                </div>
+
                 <Sidebar
                   role={role}
                   selectedSource={selectedSource}
                   onSelectSource={handleSelectSource}
                 />
+                {selectedSource && canEditLayout && (
+                  <div className="mt-1 flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-subtle">Assign:</span>
+                    {[0, 1, 2, 3].map((idx) => (
+                      <button
+                        key={idx}
+                        className="badge-btn text-xs"
+                        onClick={() => handleQuickAssign(idx)}
+                      >
+                        P{idx + 1}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex-1 theme-panel p-3 sm:p-4 shadow relative flex flex-col min-h-0">
                   <div className="theme-panel p-3 sm:p-4 mb-3">
@@ -456,12 +571,9 @@ export default function App() {
                       onPause={handlePause}
                       onStop={handleStop}
                       status={sessionStatus}
+                      canControl={canControlSession}
+                      readOnlyReason="Viewer role cannot control the session."
                     />
-                    <div className="text-xs text-subtle px-1">
-                      <div>Layout: v{layoutVersion}</div>
-                      <div>Participants: {presenceCount}</div>
-                    </div>
-                    {layoutSyncError && <div className="text-xs text-red-500 px-1 mt-1">{layoutSyncError}</div>}
                   </div>
 
                   <div className="mt-3">
@@ -470,6 +582,7 @@ export default function App() {
                       setGridSources={updateGridSources}
                       selectedSource={selectedSource}
                       onPanelClick={handlePanelClick}
+                      readOnly={!canEditLayout}
                     />
                   </div>
                 </div>
