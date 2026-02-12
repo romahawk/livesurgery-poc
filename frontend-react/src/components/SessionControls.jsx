@@ -60,9 +60,9 @@ export default function SessionControls({
   };
 
   return (
-    <div className="p-4 theme-panel mb-4">
+    <div className="p-2.5 theme-panel mb-0">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="text-sm inline-flex items-center gap-2 text-default">
+        <div className="text-xs sm:text-sm inline-flex items-center gap-2 text-default">
           <Clock4 className="h-4 w-4" aria-hidden />
           <strong>Session Time:</strong>
           <span>{formatTime(timer)}</span>

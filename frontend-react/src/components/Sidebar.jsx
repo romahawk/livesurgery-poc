@@ -52,7 +52,7 @@ function DraggableSource({ source, selected, onSelect }) {
       ref={setNodeRef}
       style={style}
       onClick={() => onSelect?.(source.src)}
-      className={`source-item flex-1 flex items-center gap-2 rounded-md px-2 py-1 lg:px-3 lg:py-2 cursor-pointer ${
+      className={`source-item flex-1 flex items-center gap-2 rounded-md px-2 py-1 lg:px-2 lg:py-1.5 cursor-pointer ${
         selected ? "ring-2 ring-teal-400 ring-offset-2 ring-offset-slate-900" : ""
       }`}
       title="Click to select, drag from handle to a panel"
@@ -111,7 +111,7 @@ export default function Sidebar({ role, selectedSource, onSelectSource }) {
   ];
 
   return (
-    <aside className="sources-panel w-full rounded-xl px-2 py-2 lg:px-3 lg:py-3 flex flex-col gap-2">
+    <aside className="sources-panel w-full rounded-xl px-2 py-2 lg:px-2 lg:py-2 flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ArrowLeftRight className="h-5 w-5 text-default" aria-hidden />
