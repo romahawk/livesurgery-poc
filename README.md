@@ -1,229 +1,89 @@
-# LiveSurgery PoC  
-Cloud-First Surgical Livestreaming & Collaboration Platform (Proof of Concept)
+# LiveSurgery
 
-This repository contains the **LiveSurgery Proof of Concept** — a prototype of a cloud-based platform for real-time surgical collaboration, multi-source OR video viewing, remote guidance, and medical education.
+A **simulated Operating Room (OR) workspace** web experience built as a **frontend-only Proof of Concept (PoC)** today, designed to evolve into an **MVP with real-time streaming, collaboration, authentication, and persistence**, and later a production-grade MedTech-adjacent system.
 
-The PoC demonstrates UX, layout logic, and architectural foundations for integrating real OR cameras, edge nodes, and streaming pipelines.
-
----
-
-## 🚀 Overview
-
-LiveSurgery aims to modernize surgical collaboration by enabling:
-
-- Multi-source OR livestreaming (endoscope, PTZ, room camera, imaging)
-- Real-time remote participation (experts, residents, students)
-- Structured education (CME, replay, analytics)
-- Vendor-neutral OR integration 
-
-This PoC focuses on:
-- UX validation  
-- Role-based OR layout  
-- Drag-and-drop video source assignment  
-- Archive & analytics mock modules  
-- Backend stream simulation  
-
-It serves as the **foundation for accelerator applications, investor demos, and hospital discussions.**
+> **Disclaimer:** The PoC is **not for clinical use**. The MVP/Production sections are targets (architecture intent), not claims of implemented functionality.
 
 ---
 
-## ✨ Features (PoC)
-
-### OR Interface  
-- 2×2 Multi-display OR layout  
-- Drag-and-drop assignment of video sources (`@dnd-kit`)  
-- Role-based layouts (Surgeon / Observer)  
-- Expandable Patient Info and Live Chat panels  
-
-### System Components  
-- Onboarding modal with localStorage tracking  
-- Light/Dark theme toggle  
-- Archive tab (mock session data)  
-- Analytics tab (Recharts-based mock metrics)  
-
-### Backend  
-- FastAPI backend with:  
-  - Healthcheck  
-  - Simulated video stream endpoint (`/video/simulate`)  
-- Clean service/model structure ready for expansion  
-
-### Documentation  
-- Full architecture documentation  
-- Agile case study  
-- Sprints 1–4  
-- Roadmap  
-- Screenshots directory  
+## Quick links (placeholders)
+- `{ label: "README", url: "https://github.com/<you>/<repo>/blob/main/README.md" }`
+- `{ label: "Architecture", url: "https://github.com/<you>/<repo>/blob/main/docs/architecture.md" }`
+- `{ label: "PRD", url: "https://github.com/<you>/<repo>/blob/main/docs/prd.md" }`
+- `{ label: "Roadmap", url: "https://github.com/<you>/<repo>/blob/main/docs/roadmap.md" }`
 
 ---
 
-## 📁 Project Structure
+## What exists today
 
-```
-livesurgery-poc/
-├── backend/
-│   └── app/
-│       ├── main.py
-│       ├── routes/
-│       ├── services/
-│       ├── models/
-│       └── utils/
-├── frontend-react/
-│   └── src/
-│       ├── components/
-│       ├── data/
-│       ├── theme/
-│       ├── hooks/ (planned)
-│       └── context/ (planned)
-└── docs/
-    ├── ARCHITECTURE.md
-    ├── AGILE_CASE_STUDY.md
-    ├── ROADMAP.md
-    ├── SPRINTS/
-    └── SCREENSHOTS/
-```
+### NOW (PoC)
+- **Frontend-only** React + Tailwind (Vite) app deployed on **Vercel**
+- Multi-panel “OR workspace” UI
+- **HTML5 video assets** (not streaming)
+- Source selector sidebar
+- Drag-and-drop / resize / layout controls (client-only)
+- Simulated roles/personas (Surgeon / Observer / Admin) for storytelling
+- **No backend**, no auth, no persistence, no WebRTC
+
+### NEXT (MVP target)
+- Auth + RBAC (Surgeon/Observer/Admin)
+- Multi-user sessions with real-time collaboration
+- Real-time streaming via **WebRTC SFU**
+- Persistence of sessions, participants, layouts
+- Recording → archive + replay
+
+### FUTURE (Production target)
+- Compliance hardening (audit-grade trails, policies, tenancy)
+- Enterprise deployment options (self-host, multi-region)
+- Device interoperability layer (ingest, hospital IT integration)
 
 ---
 
-## 🧱 Tech Stack
-
-### **Frontend**
-- React (Vite)
-- Tailwind CSS
-- @dnd-kit (drag & drop)
-- Recharts
-- Lucide Icons
-
-### **Backend**
-- FastAPI
-- Python 3
-- Uvicorn
-- Pydantic
-
----
-
-## ⚙️ Local Development
-
-### 1. Clone Repo
-```bash
-git clone https://github.com/romahawk/livesurgery-poc.git
-cd livesurgery-poc
-```
-
----
-
-## Backend Setup (FastAPI)
+## Run locally (PoC)
 
 ```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\activate       # Windows
-pip install -r requirements.txt
-
-uvicorn app.main:app --reload --port 8000
-```
-
-Backend runs at:  
-➡️ http://localhost:8000
-
----
-
-## Frontend Setup (React)
-
-```bash
-cd frontend-react
 npm install
 npm run dev
 ```
 
-Frontend runs at:  
-➡️ http://localhost:5173
-
----
-
-## 🔐 Environment Variables
-
-### Backend — `/backend/.env.example`
-```env
-VIDEO_STREAM_URL=rtsp://localhost:8554/simulated_feed
-```
-
-### Frontend — `/frontend-react/.env.example`
-```env
-VITE_API_BASE_URL=http://localhost:8000
-```
-
-Rename both files to `.env` and adjust as needed.
-
----
-
-## 🧭 Documentation
-
-All project documentation is inside `/docs`:
-
-- **ARCHITECTURE.md** — system design, diagrams, backend/frontend breakdown  
-- **AGILE_CASE_STUDY.md** — vision, user stories, workflow, retrospectives  
-- **ROADMAP.md** — short-, medium-, long-term strategy  
-- **SPRINTS/** — Sprint 1–4 reports  
-- **SCREENSHOTS/** — screenshots for portfolio & presentation  
-
----
-
-## 🛣 Roadmap (Summary)
-
-### Short-Term
-- Clean repo, finalize PoC UI
-- Improve OR layout, DnD, onboarding
-- Polished investor/accelerator demo
-
-### Medium-Term
-- Sessions API  
-- Real archive & analytics  
-- WebRTC/HLS gateway  
-- Postgres persistence  
-- Role-based authentication  
-
-### Long-Term
-- Multi-tenant hospital mode  
-- Edge node for OR hardware  
-- Education modules & CME  
-- AI-driven analytics  
-
-Complete roadmap: `/docs/ROADMAP.md`
-
----
-
-## 🧩 Architecture Diagram
-
-See `/docs/ARCHITECTURE.md` for full details.
-
-```
-Frontend → FastAPI → (future) Streaming Gateway → Edge Node → OR Devices
+Build/preview:
+```bash
+npm run build
+npm run preview
 ```
 
 ---
 
-## 🎯 Purpose of the PoC
-
-This PoC is built to:
-
-- Validate the concept with OR staff  
-- Demonstrate workflows to MedTech vendors  
-- Support accelerator applications  
-- Prepare foundation for MVP & pilots  
+## Demo
+- Live demo: https://livesurgery.vercel.app/
 
 ---
 
-## 👤 About the Author
+## Repo structure (suggested)
 
-**Roman Mazuryk**  
-MedTech entrepreneur → Full-Stack Developer  
-Specializing in OR Integration, Surgical Video, and Cloud Solutions.
-
-GitHub: **@romahawk**  
-Portfolio: https://roman-mazuryk.vercel.app/#projects/livesurgery
+```txt
+/
+  src/
+    app/                 # shell, routing, providers
+    components/          # reusable UI components
+    features/
+      workspace/         # multi-panel OR workspace (PoC core)
+      video/             # video asset + source selection
+      roles/             # simulated personas and UI gating
+    assets/              # video files, thumbnails (PoC)
+  docs/
+    architecture.md
+    prd.md
+    roadmap.md
+  public/
+```
 
 ---
 
-## 📄 License
+## Roadmap snapshot
 
-MIT License (see `/LICENSE`)
+| Phase | Outcome | Notes |
+|---|---|---|
+| NOW (PoC) | UI-only simulated OR workspace | Portfolio-ready interaction demo |
+| NEXT (MVP) | Real-time sessions + auth + persistence | Managed services, incremental migration |
+| FUTURE | Compliance & enterprise readiness | Stronger security, audit, interoperability |
