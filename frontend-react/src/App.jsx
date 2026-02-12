@@ -59,6 +59,7 @@ export default function App() {
   });
 
   const [sessionStatus, setSessionStatus] = useState("idle");
+  const [selectedSessionId, setSelectedSessionId] = useState("");
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
@@ -70,7 +71,10 @@ export default function App() {
   const [layoutVersion, setLayoutVersion] = useState(0);
   const [layoutSyncError, setLayoutSyncError] = useState("");
   const [presenceCount, setPresenceCount] = useState(0);
-  const [wsConnected, setWsConnected] = useState(false);
+  const [, setWsConnected] = useState(false);
+  const [wsState, setWsState] = useState("offline");
+  const [wsReconnectCount, setWsReconnectCount] = useState(0);
+  const [wsReconnectTick, setWsReconnectTick] = useState(0);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
@@ -80,8 +84,23 @@ export default function App() {
   const layoutVersionRef = useRef(0);
   const publishQueueRef = useRef(Promise.resolve());
   const toastSeqRef = useRef(0);
+  const reconnectTimerRef = useRef(null);
   const canControlSession = role !== "viewer";
   const canEditLayout = role !== "viewer";
+  const syncLabel =
+    wsState === "connected"
+      ? "Connected"
+      : wsState === "connecting"
+        ? "Connecting"
+        : wsState === "reconnecting"
+          ? `Reconnecting${wsReconnectCount > 0 ? ` (${wsReconnectCount})` : ""}`
+          : "Offline";
+  const syncClass =
+    wsState === "connected"
+      ? "text-emerald-300"
+      : wsState === "connecting" || wsState === "reconnecting"
+        ? "text-amber-300"
+        : "text-red-400";
 
   useEffect(() => {
     layoutVersionRef.current = layoutVersion;
@@ -132,39 +151,84 @@ export default function App() {
   }, [role]);
 
   useEffect(() => {
-    if (activeSessionId || sessions.length === 0) return;
-    const preferred = sessions.find((s) => s.status === "LIVE") || sessions[0];
-    setActiveSessionId(preferred.id);
-    if (preferred.status === "LIVE") setSessionStatus("running");
-  }, [sessions, activeSessionId]);
+    if (sessions.length === 0) {
+      setSelectedSessionId("");
+      if (!activeSessionId) setSessionStatus("idle");
+      return;
+    }
+
+    const hasSelected = sessions.some((s) => s.id === selectedSessionId);
+    if (!hasSelected) {
+      const preferred = sessions.find((s) => s.status === "LIVE") || sessions[0];
+      setSelectedSessionId(preferred.id);
+    }
+
+    if (activeSessionId) {
+      const active = sessions.find((s) => s.id === activeSessionId);
+      if (active) {
+        setSessionStatus(active.status === "LIVE" ? "running" : active.status.toLowerCase());
+      }
+    }
+  }, [sessions, selectedSessionId, activeSessionId]);
 
   useEffect(() => {
+    let disposed = false;
+
+    const scheduleReconnect = () => {
+      if (disposed || !activeSessionId) return;
+      setWsState("reconnecting");
+      setWsReconnectCount((prev) => {
+        const next = prev + 1;
+        const delayMs = Math.min(10000, 1000 * Math.pow(2, Math.max(0, next - 1)));
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = setTimeout(() => {
+          if (!disposed) setWsReconnectTick((tick) => tick + 1);
+        }, delayMs);
+        return next;
+      });
+    };
+
     const run = async () => {
       if (!activeSessionId) {
         setWsConnected(false);
+        setWsState("offline");
         setPresenceCount(0);
         return;
       }
+
+      setWsState(wsReconnectCount > 0 ? "reconnecting" : "connecting");
       try {
         const join = await joinSession(role, activeSessionId);
         const layout = await getLayout(role, activeSessionId);
+        if (disposed) return;
         applyRemoteLayout(layout.version, layout.layout);
 
         const wsBase = String(join?.realtime?.wsUrl || "").replace(/^http/i, "ws");
         const wsToken = join?.realtime?.token;
-        if (!wsBase || !wsToken) return;
+        if (!wsBase || !wsToken) {
+          setWsState("offline");
+          return;
+        }
 
         const ws = new WebSocket(`${wsBase}?token=${encodeURIComponent(wsToken)}`);
         wsRef.current = ws;
 
         ws.onopen = () => {
+          if (disposed) return;
+          clearTimeout(reconnectTimerRef.current);
           setWsConnected(true);
-          pushToast("success", "Realtime connected");
+          setWsState("connected");
+          if (wsReconnectCount > 0) pushToast("success", "Realtime reconnected");
+          setWsReconnectCount(0);
         };
-        ws.onclose = () => setWsConnected(false);
-        ws.onerror = () => {
+        ws.onclose = () => {
+          if (disposed) return;
           setWsConnected(false);
-          pushToast("error", "Realtime connection issue");
+          scheduleReconnect();
+        };
+        ws.onerror = () => {
+          if (disposed) return;
+          setWsConnected(false);
         };
         ws.onmessage = (event) => {
           try {
@@ -186,20 +250,24 @@ export default function App() {
           }
         };
       } catch (err) {
+        if (disposed) return;
         setLayoutSyncError(err instanceof Error ? err.message : "Realtime sync unavailable.");
-        pushToast("error", "Realtime sync unavailable");
+        if (wsReconnectCount === 0) pushToast("error", "Realtime sync unavailable");
+        scheduleReconnect();
       }
     };
 
     run();
 
     return () => {
+      disposed = true;
+      clearTimeout(reconnectTimerRef.current);
       const ws = wsRef.current;
       if (ws) ws.close();
       wsRef.current = null;
       setWsConnected(false);
     };
-  }, [activeSessionId, role]);
+  }, [activeSessionId, role, wsReconnectTick]);
 
   const publishGridChange = async (previousGrid, nextGrid) => {
     if (!activeSessionId || role === "viewer") return;
@@ -305,10 +373,11 @@ export default function App() {
   const handleStart = async () => {
     if (!canControlSession) return;
     try {
-      let sessionId = activeSessionId;
+      let sessionId = activeSessionId || selectedSessionId;
       if (!sessionId) {
         const created = await createSession(role, `Live Session ${new Date().toISOString()}`);
         sessionId = created.id;
+        setSelectedSessionId(sessionId);
         setActiveSessionId(sessionId);
       }
       await startSession(role, sessionId);
@@ -318,6 +387,33 @@ export default function App() {
     } catch (err) {
       setSessionsError(err instanceof Error ? err.message : "Could not start session");
       pushToast("error", "Could not start session");
+    }
+  };
+
+  const handleJoinSelectedSession = async () => {
+    if (!selectedSessionId) {
+      pushToast("warning", "Select a session to join");
+      return;
+    }
+    const selected = sessions.find((s) => s.id === selectedSessionId);
+    setActiveSessionId(selectedSessionId);
+    setWsReconnectCount(0);
+    setWsReconnectTick((tick) => tick + 1);
+    setSessionStatus(selected?.status === "LIVE" ? "running" : "idle");
+    pushToast("success", "Joined session");
+  };
+
+  const handleCreateSessionDraft = async () => {
+    if (!canControlSession) return;
+    try {
+      const created = await createSession(role, `Live Session ${new Date().toISOString()}`);
+      await refreshSessions(role);
+      setSelectedSessionId(created.id);
+      setActiveSessionId(created.id);
+      setSessionStatus("idle");
+      pushToast("success", "New session created");
+    } catch (err) {
+      pushToast("error", err instanceof Error ? err.message : "Failed to create session");
     }
   };
 
@@ -450,13 +546,44 @@ export default function App() {
                     <span className="text-subtle">Participants:</span>
                     <span className="text-default">{presenceCount}</span>
                     <span className="text-subtle">Sync:</span>
-                    <span className={wsConnected ? "text-emerald-300" : "text-red-400"}>
-                      {wsConnected ? "Connected" : "Offline"}
-                    </span>
+                    <span className={syncClass}>{syncLabel}</span>
                     <span className="text-subtle">Layout:</span>
                     <span className="text-default">v{layoutVersion}</span>
                   </div>
                   {layoutSyncError && <div className="text-xs text-red-400 mt-1">{layoutSyncError}</div>}
+                </div>
+
+                <div className="theme-panel p-2 border-default border">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-subtle">Session</span>
+                    <select
+                      className="searchbar rounded px-2 py-1 text-xs min-w-[260px]"
+                      value={selectedSessionId}
+                      onChange={(e) => setSelectedSessionId(e.target.value)}
+                    >
+                      <option value="">Select session</option>
+                      {sessions.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.title} [{s.status}] ({s.id.slice(0, 8)})
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      className="badge-btn text-xs"
+                      onClick={handleJoinSelectedSession}
+                      disabled={!selectedSessionId}
+                    >
+                      Join
+                    </button>
+                    <button
+                      className="badge-btn text-xs"
+                      onClick={handleCreateSessionDraft}
+                      disabled={!canControlSession}
+                      title={!canControlSession ? "Viewer cannot create sessions." : "Create new draft session"}
+                    >
+                      New Session
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid gap-2 lg:grid-cols-3 items-stretch">
@@ -534,13 +661,32 @@ export default function App() {
                       {sessionStatus.toUpperCase()}
                     </span>
                     <span className="text-subtle">Sync:</span>
-                    <span className={wsConnected ? "text-emerald-300" : "text-red-400"}>
-                      {wsConnected ? "Connected" : "Offline"}
-                    </span>
+                    <span className={syncClass}>{syncLabel}</span>
                     <span className="text-subtle">Participants:</span>
                     <span className="text-default">{presenceCount}</span>
                     <span className="text-subtle">Layout:</span>
                     <span className="text-default">v{layoutVersion}</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <select
+                      className="searchbar rounded px-2 py-1 text-xs min-w-[220px]"
+                      value={selectedSessionId}
+                      onChange={(e) => setSelectedSessionId(e.target.value)}
+                    >
+                      <option value="">Select session</option>
+                      {sessions.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.title} [{s.status}]
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      className="badge-btn text-xs"
+                      onClick={handleJoinSelectedSession}
+                      disabled={!selectedSessionId}
+                    >
+                      Join
+                    </button>
                   </div>
                 </div>
 
