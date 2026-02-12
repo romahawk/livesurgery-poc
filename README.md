@@ -7,10 +7,12 @@ A **simulated Operating Room (OR) workspace** web experience built as a **fronte
 ---
 
 ## Quick links (placeholders)
-- `{ label: "README", url: "https://github.com/<you>/<repo>/blob/main/README.md" }`
-- `{ label: "Architecture", url: "https://github.com/romahawk/livesurgery-poc/blob/main/docs/architecture.md" }`
-- `{ label: "PRD", url: "https://github.com/romahawk/livesurgery-poc/blob/main/docs/prd.md" }`
-- `{ label: "Roadmap", url: "https://github.com/romahawk/livesurgery-poc/blob/main/README.md" }`
+## 🔗 Quick Links
+
+- [README](https://github.com/romahawk/livesurgery-poc/blob/main/README.md)
+- [Architecture](https://github.com/romahawk/livesurgery-poc/blob/main/docs/architecture.md)
+- [PRD](https://github.com/romahawk/livesurgery-poc/blob/main/docs/prd.md)
+- [Roadmap](https://github.com/romahawk/livesurgery-poc/blob/main/docs/roadmap.md)
 
 ---
 
