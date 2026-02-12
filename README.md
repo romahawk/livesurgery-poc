@@ -8,9 +8,9 @@ A **simulated Operating Room (OR) workspace** web experience built as a **fronte
 
 ## Quick links (placeholders)
 - `{ label: "README", url: "https://github.com/<you>/<repo>/blob/main/README.md" }`
-- `{ label: "Architecture", url: "https://github.com/<you>/<repo>/blob/main/docs/architecture.md" }`
-- `{ label: "PRD", url: "https://github.com/<you>/<repo>/blob/main/docs/prd.md" }`
-- `{ label: "Roadmap", url: "https://github.com/<you>/<repo>/blob/main/docs/roadmap.md" }`
+- `{ label: "Architecture", url: "https://github.com/romahawk/livesurgery-poc/blob/main/docs/architecture.md" }`
+- `{ label: "PRD", url: "https://github.com/romahawk/livesurgery-poc/blob/main/docs/prd.md" }`
+- `{ label: "Roadmap", url: "https://github.com/romahawk/livesurgery-poc/blob/main/README.md" }`
 
 ---
 
