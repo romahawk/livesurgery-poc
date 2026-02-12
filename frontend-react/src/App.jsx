@@ -372,7 +372,7 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen bg-surface text-default flex flex-col">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-surface text-default flex flex-col">
       <Navbar
         role={role}
         setRole={setRole}
@@ -409,7 +409,7 @@ export default function App() {
         </button>
       </div>
 
-      <main className="flex-1 w-full px-4 py-4 sm:py-6">
+      <main className="flex-1 w-full px-4 py-4 sm:py-6 lg:py-2 lg:overflow-hidden">
         {toasts.length > 0 && (
           <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm">
             {toasts.map((toast) => (
@@ -435,11 +435,11 @@ export default function App() {
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <div className="hidden lg:flex flex-col gap-4 h-full min-h-[480px]">
+          <div className="hidden lg:flex flex-col gap-2 h-full min-h-0 overflow-hidden">
             {currentTab === "Live" && (
               <>
-                <div className="theme-panel p-2 sm:p-3 border-default border">
-                  <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                <div className="theme-panel p-1.5 sm:p-2 border-default border">
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs">
                     <span className={`px-2 py-1 rounded-full border ${sessionStatus === "running" ? "text-emerald-300 border-emerald-500/40" : "text-amber-300 border-amber-500/40"}`}>
                       {sessionStatus.toUpperCase()}
                     </span>
@@ -459,7 +459,7 @@ export default function App() {
                   {layoutSyncError && <div className="text-xs text-red-400 mt-1">{layoutSyncError}</div>}
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-3 items-stretch">
+                <div className="grid gap-2 lg:grid-cols-3 items-stretch">
                   <div className="lg:col-span-2">
                     <Sidebar
                       role={role}
@@ -467,8 +467,8 @@ export default function App() {
                       onSelectSource={handleSelectSource}
                     />
                     {selectedSource && canEditLayout && (
-                      <div className="mt-2 flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-subtle">Assign selected source:</span>
+                      <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] text-subtle">Assign:</span>
                         {[0, 1, 2, 3].map((idx) => (
                           <button
                             key={idx}
@@ -482,7 +482,7 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="lg:col-span-1 theme-panel p-3 sm:p-4 shadow flex flex-col justify-center">
+                  <div className="lg:col-span-1 theme-panel p-2 sm:p-2.5 shadow flex flex-col justify-center">
                     <SessionControls
                       onStart={handleStart}
                       onPause={handlePause}
@@ -494,7 +494,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="theme-panel p-3 sm:p-4 shadow flex flex-col flex-1 min-h-0 mt-4">
+                <div className="theme-panel p-2 sm:p-2.5 shadow flex flex-col flex-1 min-h-0 mt-2">
                   <div className="ls-live-grid-shell">
                     <DisplayGrid
                       gridSources={gridSources}

@@ -1,9 +1,0 @@
-{
-  "redirects": [
-    {
-      "source": "/:path*",
-      "destination": "https://www.mazuryk.dev/livesurgery",
-      "permanent": true
-    }
-  ]
-}
