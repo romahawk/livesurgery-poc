@@ -1,87 +1,110 @@
-# LiveSurgery PoC — Roadmap
+# LiveSurgery Roadmap
 
-This roadmap outlines the milestones for transforming the LiveSurgery PoC into a hospital-ready solution.
-
----
-
-# 1. Short-Term (1–2 Months)
-
-**Objective: Stable PoC for demo & feedback**
-
-### Technical
-- Clean repo structure, docs, sprints → DONE
-- Finalize OR layout UI
-- Improve DnD for source assignment
-- Backend simulated streams integration
-- Add onboarding + theme + role presets
-
-### PM / Documentation
-- Sprint documentation
-- Updated README + Architecture
-- Prepare screenshots & demo videos
+This roadmap shows a realistic evolution path from **frontend-only PoC** to **MVP** and beyond, optimized for a solo developer.
 
 ---
 
-# 2. Medium-Term (2–6 Months)
+## NOW (PoC) — Current state
 
-**Objective: Pilot-ready platform**
+### Done
+- Vite + React + Tailwind SPA
+- OR workspace layout (multi-panel)
+- HTML5 video assets with source selection
+- Drag/drop + resize layout interactions
+- Simulated personas (Surgeon/Observer/Admin)
+- Deployed on Vercel
 
-### Backend
-- Implement Sessions API  
-- Add Archive → real DB (PostgreSQL)
-- Add Analytics endpoints
-- User accounts + RBAC
-- Add logging & metadata collection
-
-### Frontend
-- Replace mock data with API calls
-- Add playback & session details
-- Add advanced analytics dashboards
-- Improve responsiveness
-
-### Streaming
-- HLS or WebRTC implementation
-- Gateway integration
-- Handling multiple OR devices
-
-### DevOps
-- Dockerization
-- CI/CD
-- Staging & demo environments
+### Known gaps (intentional)
+- No backend, no auth, no persistence
+- No WebRTC / real streaming
+- No collaboration (single-user only)
+- No audit logs / observability
 
 ---
 
-# 3. Long-Term (6–12 Months)
+## NEXT (MVP) — Target milestones
 
-**Objective: Multi-site surgical collaboration platform**
+### Milestone 1 — Backend foundation (Sessions + Auth)
+**Outcomes**
+- API service scaffold
+- Auth integration + RBAC enforcement
+- Session CRUD + membership model
+- Postgres schema migrations
 
-### Product
-- Multi-tenant hospital support
-- Secure OR → cloud → viewer architecture
-- Edge nodes for device integration
-
-### Education & Analytics
-- Structured CME modules
-- Student analytics & dashboards
-- Time-synced annotation layer
-
-### Partnerships
-- OR vendors (Surgiris, Surgimedia, Wolf)
-- Medical universities
-- Clinical pilot hospitals (France / Switzerland)
+**Deliverables**
+- `/v1/sessions` endpoints
+- `/participants:join` endpoint that returns WS + SFU access tokens
+- RBAC checks + minimal audit events
 
 ---
 
-# 4. Strategic Positioning
+### Milestone 2 — Realtime collaboration (non-media)
+**Outcomes**
+- WebSocket gateway (presence + shared state)
+- Sync layout and source selections
 
-LiveSurgery sits at the intersection of:
+**Design notes**
+- Server-authoritative session state
+- Conflict rule: last-write-wins per field, versioned layout snapshots
 
-**MedTech × OR Integration × Surgical Education × Cloud Video Collaboration**
+**Deliverables**
+- Presence messages
+- Layout update messages (+ version conflicts)
+- “Observer read-only mode”
 
-Key differentiators:
-- Vendor-neutral interoperability  
-- Cloud-first architecture  
-- Designed for learning as much as livestreaming  
-- Scalable, multi-site vision  
+---
 
-The PoC is the first building block toward hospital pilots, accelerator applications, and long-term MedTech partnerships.
+### Milestone 3 — WebRTC via SFU (live streaming)
+**Outcomes**
+- SFU integration (managed first recommended)
+- Publish/subscribe flows implemented in frontend
+- TURN planning for NAT traversal
+
+**Deliverables**
+- “Join room” + “Publish tracks”
+- Observer subscription selection
+- Join-to-first-frame instrumentation
+
+---
+
+### Milestone 4 — Recording + archive (MVP-lite)
+**Outcomes**
+- Record session streams
+- Store outputs in object storage
+- Archive list + playback UI
+
+**Deliverables**
+- `/v1/sessions/{id}/archives` endpoints
+- Storage lifecycle defaults (`expires_at`)
+- Playback (HLS or MP4)
+
+---
+
+### Milestone 5 — Hardening + portfolio polish
+**Outcomes**
+- Threat model review + security controls baseline
+- Observability (logs, metrics, simple tracing)
+- Demo scripts + contributor onboarding
+
+**Deliverables**
+- Error envelope standards
+- SLO dashboards (starter)
+- “Demo mode” seed data
+
+---
+
+## FUTURE (Production) — Themes (non-MVP)
+- Multi-tenant orgs + SSO/SCIM
+- Audit-grade event trails, retention governance
+- More robust annotations and replay features
+- Enterprise deployment (containers, multi-region)
+- Device interoperability layer (ingest adapters, governance)
+
+---
+
+## Release readiness checklist (MVP)
+- Auth + RBAC verified with tests
+- Realtime state sync stable under reconnects
+- TURN coverage tested across networks
+- Recording pipeline verified end-to-end
+- No sensitive data stored unintentionally
