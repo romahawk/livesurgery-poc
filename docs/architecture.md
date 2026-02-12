@@ -1,197 +1,209 @@
-# LiveSurgery PoC — System Architecture
+# LiveSurgery Architecture
 
-LiveSurgery PoC is a proof-of-concept for a cloud-first surgical livestreaming and collaboration platform.  
-Its purpose is to validate multi-video OR layout UX, drag-and-drop logic, onboarding flow, and initial backend communication.
-
-The PoC is intentionally lightweight but structured to scale into a real MedTech product.
-
----
-
-# 1. High-Level Overview
-
-The system consists of two main layers:
-
-## **Frontend (React + Vite + Tailwind)**
-- Builds the OR interface: multi-panel video layout, role-based view, archive, analytics, onboarding.
-- Contains simulated session data and basic UI logic.
-
-## **Backend (FastAPI)**
-- Provides healthcheck.
-- Provides **simulated video stream endpoints** (placeholder for real OR cameras).
-- Organizes models and services for future expansion.
-
-```
-+-----------------------+     HTTP/JSON     +-----------------------+
-|     React Frontend    | <----------------> |     FastAPI Backend    |
-| (OR UI, DnD, Tabs)    |                   | (Simulated Streaming)  |
-+-----------------------+                   +-----------------------+
-            |                                           |
-            |       (future) WebRTC / HLS / RTSP        |
-            v                                           v
-+-----------------------+                +-----------------------------+
-| Video Player Layer    |                | OR Cameras & Integrators    |
-| (to be implemented)   |                | PTZ, Endoscope, Imaging     |
-+-----------------------+                +-----------------------------+
-```
+This document describes:
+- **NOW (PoC):** what exists today (frontend-only)
+- **NEXT (MVP):** a production-realistic target architecture adding streaming + collaboration + auth + persistence
+- **FUTURE:** evolution path for compliance/enterprise hardening
 
 ---
 
-# 2. Repository Structure
-
-```
-livesurgery-poc/
-├── backend/
-│   └── app/
-│       ├── main.py
-│       ├── models/
-│       ├── routes/
-│       ├── services/
-│       └── utils/
-├── frontend-react/
-│   └── src/
-│       ├── components/
-│       ├── data/
-│       ├── theme/
-│       ├── hooks/ (planned)
-│       └── context/ (planned)
-└── docs/
-```
-
-Each part is modular and isolated — ideal for future scaling.
+## Architecture principles
+- **Transparency:** do not inflate PoC capabilities; label clearly
+- **Incremental evolution:** reuse UI primitives; add backend/services stepwise
+- **Operational simplicity:** optimized for solo developer MVP path
+- **Security-first baseline:** least privilege, short-lived tokens, secure defaults
+- **Production realism:** use proven patterns for realtime media (SFU) and identity (OIDC)
 
 ---
 
-# 3. Backend Architecture (FastAPI)
-
-## 3.1 Entry Point — `main.py`
-- Initializes the FastAPI app  
-- Includes routers (`video`)  
-- Exposes root healthcheck.
-
-## 3.2 Routes
-### `/video/simulate`
-Returns simulated RTSP/HLS URL.
-
-## 3.3 Services
-Logic for producing simulated stream URLs.
-Future role: connection to edge node, OR devices.
-
-## 3.4 Models
-Pydantic models for future session metadata.
-
-## 3.5 Utils
-Helper utilities (IDs, timestamps, etc.)
+## Constraints
+- **NOW (PoC):** Vercel SPA + HTML5 assets; no backend services
+- **NEXT (MVP):** add backend + realtime + SFU without rewriting the UI
+- **Domain-adjacent to MedTech:** design for “compliance-ready” posture, but **not clinical**
 
 ---
 
-# 4. Frontend Architecture (React)
+## System context (C4 L1) — MVP target
 
-## Structure
+```mermaid
+flowchart LR
+  S[Surgeon] --> FE[LiveSurgery Web App]
+  O[Observer] --> FE
+  A[Admin] --> FE
 
-```
-components/
-  layout/
-  session/
-  tabs/
-  common/
-data/
-theme/
-hooks/
-context/
-```
+  FE --> API[Session API]
+  FE --> WS[Realtime Gateway]
+  FE --> SFU[Media SFU]
 
-## Core UI Modules
+  API --> DB[(Postgres)]
+  API --> OBJ[(Object Storage)]
+  API --> IDP[Identity Provider (OIDC)]
 
-- **DisplayGrid** (multi-panel layout)
-- **DnD source assignment** (`@dnd-kit`)
-- **Archive & Analytics** tabs (mock data)
-- **Onboarding modal**
-- **Theme provider**
-- **Role selector**
-
----
-
-# 5. Data Flow
-
-Current PoC:
-
-```
-React UI → mock data → UI state
-```
-
-Future:
-
-```
-React UI → Streaming Layer → Edge Node → OR Cameras
+  SFU --> TURN[STUN/TURN]
+  SFU --> REC[Recording Worker]
+  REC --> OBJ
 ```
 
 ---
 
-# 6. API Overview
+## Container view (C4 L2) — MVP target
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | / | Healthcheck |
-| GET | /video/simulate | Returns simulated stream URL |
+**Recommended MVP shape:** Vercel-hosted frontend + managed DB/storage + managed SFU (then self-host later if needed).
 
-Future:
-- `/sessions`
-- `/analytics`
-- `/auth`
-- `/events`
+```mermaid
+flowchart TB
+  subgraph Client
+    B[Browser (React SPA)]
+  end
 
----
+  subgraph Edge
+    V[Vercel (Static Hosting)]
+  end
 
-# 7. Security & Config
+  subgraph Backend
+    API[API Service (REST)]
+    WS[Realtime Gateway (WebSocket)]
+    DB[(Postgres)]
+    OBJ[(S3-compatible Storage)]
+    R[(Redis - optional)]
+  end
 
-Current:
-- No auth
-- No PHI
-- Mock data only
+  subgraph Media
+    SFU[SFU]
+    TURN[TURN/STUN]
+    REC[Recording/Transcode Worker]
+  end
 
-Planned:
-- JWT auth
-- RBAC (surgeon / observer / admin)
-- Audit logs
-- TLS everywhere
-
----
-
-# 8. Limitations
-
-- No real video streaming yet
-- No persistence
-- No backend-driven archive
-- No streaming protocol (WebRTC/HLS)
-- No OR hardware integration
-
----
-
-# 9. Future Architecture Vision
-
-```
-Frontend → API Gateway → Microservices
-                         ↘
-                          Edge Node → OR Devices
+  B --> V --> API
+  B --> WS
+  B --> SFU
+  SFU --> TURN
+  SFU --> REC --> OBJ
+  API --> DB
+  API --> OBJ
+  WS --> API
+  SFU --> R
 ```
 
-Microservices:  
-- Auth  
-- Sessions  
-- Streaming  
-- Analytics  
+---
 
-Edge Node:  
-- WebRTC/HLS translation  
-- Camera routing  
-- Secure OR connectivity  
+## Frontend component view (C4 L3) — PoC core reused in MVP
+
+```mermaid
+flowchart LR
+  AppShell --> Router
+  AppShell --> RoleProvider
+  AppShell --> WorkspacePage
+
+  WorkspacePage --> LayoutEngine
+  WorkspacePage --> SourceSidebar
+  WorkspacePage --> PanelGrid
+
+  PanelGrid --> VideoPanel
+  VideoPanel --> Html5Player
+  VideoPanel --> PanelControls
+
+  LayoutEngine --> DnD[DnD/Resize Controller]
+  LayoutEngine --> LayoutStore[Layout State Store]
+
+  SourceSidebar --> SourceCatalog
+  SourceSidebar --> SelectionState
+```
 
 ---
 
-# 10. Summary
+## Realtime architecture (MVP)
+### Media: WebRTC + SFU
+- SFU forwards streams efficiently to many observers
+- Clients publish/subscriber tracks; SFU handles routing
+- TURN/STUN for NAT traversal; short-lived tokens for access
 
-LiveSurgery PoC provides:
-- Clean modular architecture
-- Scalable separation of concerns
-- A strong UX foundation for OR workflows
-- A realistic platform for MedTech demos & future pilots
+### Collaboration state: WebSocket
+- Presence (who is in session)
+- Shared session state (layout, selected sources, pointers/annotations)
+- Server-authoritative updates with optimistic UI
+
+---
+
+## Key design decisions (ADR summary)
+
+| ADR | Decision | Why |
+|---|---|---|
+| 001 | Frontend-only PoC | Speed + clear portfolio transparency |
+| 002 | MVP auth + RBAC | Safe multi-user collaboration |
+| 003 | SFU-based media | Scales to many observers with low latency |
+| 004 | Recording to object storage | Cost-effective replay + retention policies |
+| 005 | Staged deployment strategy | Minimize ops early; increase control later |
+
+---
+
+## Data model overview (MVP)
+| Entity | Purpose |
+|---|---|
+| User | Identity + profile |
+| Session | Live event container |
+| Participant | User-in-session + role |
+| Stream | SFU track references + metadata |
+| Layout | Versioned layout JSON |
+| ArchiveItem | Recording metadata + storage key |
+
+---
+
+## Sequence diagrams (MVP)
+
+### Join session
+```mermaid
+sequenceDiagram
+  participant U as User (Browser)
+  participant FE as Frontend
+  participant API as Session API
+  participant WS as WS Gateway
+  participant SFU as SFU
+
+  U->>FE: Open session
+  FE->>API: Join (auth)
+  API-->>FE: wsToken + sfuToken + role
+  FE->>WS: Connect (wsToken)
+  FE->>SFU: Connect (sfuToken)
+  WS-->>FE: Presence + state sync
+  SFU-->>FE: Media tracks
+```
+
+### Start recording
+```mermaid
+sequenceDiagram
+  participant Admin as Surgeon/Admin
+  participant API as API
+  participant SFU as SFU
+  participant REC as Recorder
+  participant OBJ as Object Storage
+
+  Admin->>API: POST /archives
+  API->>SFU: Start recording
+  SFU->>REC: Media feed
+  REC->>OBJ: Write MP4/HLS
+  REC-->>API: Complete + metadata
+  API-->>Admin: Archive ready
+```
+
+---
+
+## Deployment diagrams
+
+```mermaid
+flowchart LR
+  subgraph POC[NOW: PoC]
+    C1[Browser] --> V1[Vercel SPA]
+    V1 --> A1[HTML5 Video Assets]
+  end
+
+  subgraph MVP[NEXT: MVP]
+    C2[Browser] --> V2[Vercel SPA]
+    V2 --> API2[API]
+    C2 --> WS2[WebSocket]
+    C2 --> SFU2[SFU]
+    API2 --> DB2[(Postgres)]
+    API2 --> OBJ2[(Object Storage)]
+    SFU2 --> OBJ2
+  end
+```
