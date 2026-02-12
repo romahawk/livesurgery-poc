@@ -57,7 +57,10 @@ async def session_ws(websocket: WebSocket, session_id: str, token: str):
             if msg_type == "layout.update":
                 if claims.role not in {"SURGEON", "ADMIN"}:
                     await websocket.send_json(
-                        {"type": "error", "payload": {"code": "FORBIDDEN", "message": "Role cannot edit layout"}}
+                        {
+                            "type": "error",
+                            "payload": {"code": "FORBIDDEN", "message": "Role cannot edit layout"},
+                        }
                     )
                     continue
                 payload = message.get("payload") or {}

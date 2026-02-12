@@ -10,9 +10,7 @@ from app.core.errors import AppError
 from app.routes import realtime, sessions, video
 
 app = FastAPI(
-    title="Livesurgery PoC API",
-    description="Backend API for Livesurgery PoC",
-    version="0.2.0"
+    title="Livesurgery PoC API", description="Backend API for Livesurgery PoC", version="0.2.0"
 )
 
 # CORS (dev-friendly defaults, tighten in production).
@@ -57,9 +55,11 @@ async def app_error_handler(request: Request, exc: AppError):
         },
     )
 
+
 @app.get("/")
 def root():
     return {"message": "Livesurgery backend is running"}
+
 
 # Mount static video directory
 videos_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../videos"))
