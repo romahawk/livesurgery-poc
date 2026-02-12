@@ -9,6 +9,7 @@ export default function DisplayGrid({
   selectedSource,
   onPanelClick,
   readOnly = false,
+  layoutMode = "2x2",
 }) {
   const [fitMode, setFitMode] = useState([
     "contain",
@@ -157,10 +158,44 @@ export default function DisplayGrid({
     );
   };
 
+  const visiblePanelIndexes = layoutMode === "1x1" ? [0] : [0, 1, 2, 3];
+
+  const gridClass =
+    layoutMode === "1x1"
+      ? "grid grid-cols-1 gap-3 sm:gap-4 h-auto lg:h-full lg:min-h-0 lg:grid-rows-1"
+      : layoutMode === "3x1"
+        ? "grid grid-cols-1 gap-3 sm:gap-4 h-auto lg:h-full lg:min-h-0 lg:grid-cols-2 lg:grid-rows-3"
+        : layoutMode === "1x3"
+          ? "grid grid-cols-1 gap-3 sm:gap-4 h-auto lg:h-full lg:min-h-0 lg:grid-cols-2 lg:grid-rows-3"
+          : "grid grid-cols-2 gap-3 sm:gap-4 h-auto lg:h-full lg:min-h-0 lg:grid-rows-2";
+
+  const getPanelDesktopPlacement = (index) => {
+    if (layoutMode === "3x1") {
+      // 3x left (stacked) | 1x right (full height)
+      if (index === 0) return "lg:col-start-1 lg:row-start-1";
+      if (index === 1) return "lg:col-start-1 lg:row-start-2";
+      if (index === 2) return "lg:col-start-1 lg:row-start-3";
+      if (index === 3) return "lg:col-start-2 lg:row-start-1 lg:row-span-3";
+    }
+    if (layoutMode === "1x3") {
+      // 1x left (full height) | 3x right (stacked)
+      if (index === 0) return "lg:col-start-1 lg:row-start-1 lg:row-span-3";
+      if (index === 1) return "lg:col-start-2 lg:row-start-1";
+      if (index === 2) return "lg:col-start-2 lg:row-start-2";
+      if (index === 3) return "lg:col-start-2 lg:row-start-3";
+    }
+    if (layoutMode === "1x1") {
+      return "lg:row-start-1 lg:col-start-1";
+    }
+    return "lg:h-full";
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 h-auto lg:h-full lg:min-h-0 lg:[grid-template-rows:1fr_1fr]">
-      {gridSources.map((src, index) => (
-        <Panel key={index} src={src} index={index} />
+    <div className={gridClass}>
+      {visiblePanelIndexes.map((index) => (
+        <div key={index} className={`h-full min-h-0 ${getPanelDesktopPlacement(index)}`}>
+          <Panel src={gridSources[index]} index={index} />
+        </div>
       ))}
     </div>
   );

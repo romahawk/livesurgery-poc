@@ -28,6 +28,7 @@ import {
 import { UserCircle, MessageCircle, CheckCircle2, AlertCircle } from "lucide-react";
 
 const EMPTY_GRID = [null, null, null, null];
+const CATALOG_SOURCES = ["endoscope.mp4", "microscope.mp4", "ptz.mp4", "vital_signs.mp4"];
 
 function gridToLayout(gridSources) {
   return {
@@ -67,6 +68,7 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState([]);
 
   const [gridSources, setGridSources] = useState(EMPTY_GRID);
+  const [layoutMode, setLayoutMode] = useState("2x2");
   const [selectedSource, setSelectedSource] = useState(null);
   const [layoutVersion, setLayoutVersion] = useState(0);
   const [layoutSyncError, setLayoutSyncError] = useState("");
@@ -79,12 +81,14 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [canUndoLayout, setCanUndoLayout] = useState(false);
 
   const wsRef = useRef(null);
   const layoutVersionRef = useRef(0);
   const publishQueueRef = useRef(Promise.resolve());
   const toastSeqRef = useRef(0);
   const reconnectTimerRef = useRef(null);
+  const layoutHistoryRef = useRef([]);
   const canControlSession = role !== "viewer";
   const canEditLayout = role !== "viewer";
   const syncLabel =
@@ -110,6 +114,8 @@ export default function App() {
     layoutVersionRef.current = version;
     setLayoutVersion(version);
     setGridSources(layoutToGrid(layout));
+    layoutHistoryRef.current = [];
+    setCanUndoLayout(false);
   };
 
   const pushToast = (kind, message) => {
@@ -302,12 +308,16 @@ export default function App() {
     );
   };
 
-  const updateGridSources = (updater, { publish = true } = {}) => {
+  const updateGridSources = (updater, { publish = true, trackHistory = true } = {}) => {
     let previousSnapshot = null;
     let nextSnapshot = null;
     setGridSources((prev) => {
       previousSnapshot = [...prev];
       nextSnapshot = typeof updater === "function" ? updater(prev) : updater;
+      if (trackHistory && JSON.stringify(previousSnapshot) !== JSON.stringify(nextSnapshot)) {
+        layoutHistoryRef.current = [...layoutHistoryRef.current.slice(-19), previousSnapshot];
+        setCanUndoLayout(layoutHistoryRef.current.length > 0);
+      }
       return nextSnapshot;
     });
 
@@ -316,6 +326,42 @@ export default function App() {
       if (!nextSnapshot || !previousSnapshot) return;
       queuePublish(previousSnapshot, [...nextSnapshot]);
     });
+  };
+
+  const resolvePrimarySource = () =>
+    selectedSource || gridSources.find((s) => !!s) || "endoscope.mp4";
+
+  const applyLayoutPreset = (presetId) => {
+    if (!canEditLayout) return;
+    const primary = resolvePrimarySource();
+    const next =
+      presetId === "quad"
+        ? [...CATALOG_SOURCES]
+        : presetId === "focus"
+          ? [primary, primary, "vital_signs.mp4", null]
+          : presetId === "teaching"
+            ? ["endoscope.mp4", "vital_signs.mp4", "ptz.mp4", null]
+            : EMPTY_GRID;
+    const nextMode =
+      presetId === "teaching" ? "3x1" : presetId === "focus" ? "1x1" : "2x2";
+    setLayoutMode(nextMode);
+    updateGridSources(next, { publish: true, trackHistory: true });
+    pushToast("success", `Layout preset applied: ${presetId}`);
+  };
+
+  const handleLayoutModeChange = (mode) => {
+    if (!canEditLayout) return;
+    setLayoutMode(mode);
+    pushToast("success", `Layout mode set to ${mode}`);
+  };
+
+  const handleUndoLayout = () => {
+    if (!canEditLayout || layoutHistoryRef.current.length === 0) return;
+    const previous = layoutHistoryRef.current[layoutHistoryRef.current.length - 1];
+    layoutHistoryRef.current = layoutHistoryRef.current.slice(0, -1);
+    setCanUndoLayout(layoutHistoryRef.current.length > 0);
+    updateGridSources(previous, { publish: true, trackHistory: false });
+    pushToast("success", "Layout undo applied");
   };
 
   const sensors = useSensors(useSensor(PointerSensor));
@@ -548,7 +594,7 @@ export default function App() {
                     <span className="text-subtle">Sync:</span>
                     <span className={syncClass}>{syncLabel}</span>
                     <span className="text-subtle">Layout:</span>
-                    <span className="text-default">v{layoutVersion}</span>
+                    <span className="text-default">v{layoutVersion} ({layoutMode})</span>
                   </div>
                   {layoutSyncError && <div className="text-xs text-red-400 mt-1">{layoutSyncError}</div>}
                 </div>
@@ -583,6 +629,37 @@ export default function App() {
                     >
                       New Session
                     </button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-subtle">Layout actions</span>
+                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("quad")} disabled={!canEditLayout}>
+                      Quad
+                    </button>
+                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("focus")} disabled={!canEditLayout}>
+                      Focus
+                    </button>
+                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("teaching")} disabled={!canEditLayout}>
+                      Teaching
+                    </button>
+                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("clear")} disabled={!canEditLayout}>
+                      Reset
+                    </button>
+                    <button className="badge-btn text-xs" onClick={handleUndoLayout} disabled={!canEditLayout || !canUndoLayout}>
+                      Undo
+                    </button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-subtle">Grid</span>
+                    {["2x2", "3x1", "1x3", "1x1"].map((mode) => (
+                      <button
+                        key={mode}
+                        className={`badge-btn text-xs ${layoutMode === mode ? "ring-1 ring-teal-400" : ""}`}
+                        onClick={() => handleLayoutModeChange(mode)}
+                        disabled={!canEditLayout}
+                      >
+                        {mode}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -629,6 +706,7 @@ export default function App() {
                       selectedSource={selectedSource}
                       onPanelClick={handlePanelClick}
                       readOnly={!canEditLayout}
+                      layoutMode={layoutMode}
                     />
                   </div>
                 </div>
@@ -665,7 +743,7 @@ export default function App() {
                     <span className="text-subtle">Participants:</span>
                     <span className="text-default">{presenceCount}</span>
                     <span className="text-subtle">Layout:</span>
-                    <span className="text-default">v{layoutVersion}</span>
+                    <span className="text-default">v{layoutVersion} ({layoutMode})</span>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <select
@@ -687,6 +765,31 @@ export default function App() {
                     >
                       Join
                     </button>
+                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("quad")} disabled={!canEditLayout}>
+                      Quad
+                    </button>
+                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("focus")} disabled={!canEditLayout}>
+                      Focus
+                    </button>
+                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("teaching")} disabled={!canEditLayout}>
+                      Teaching
+                    </button>
+                    <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("clear")} disabled={!canEditLayout}>
+                      Reset
+                    </button>
+                    <button className="badge-btn text-xs" onClick={handleUndoLayout} disabled={!canEditLayout || !canUndoLayout}>
+                      Undo
+                    </button>
+                    {["2x2", "3x1", "1x3", "1x1"].map((mode) => (
+                      <button
+                        key={mode}
+                        className={`badge-btn text-xs ${layoutMode === mode ? "ring-1 ring-teal-400" : ""}`}
+                        onClick={() => handleLayoutModeChange(mode)}
+                        disabled={!canEditLayout}
+                      >
+                        {mode}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -729,6 +832,7 @@ export default function App() {
                       selectedSource={selectedSource}
                       onPanelClick={handlePanelClick}
                       readOnly={!canEditLayout}
+                      layoutMode={layoutMode}
                     />
                   </div>
                 </div>
