@@ -8,6 +8,7 @@ export default function DisplayGrid({
   setGridSources,
   selectedSource,
   onPanelClick,
+  readOnly = false,
 }) {
   const [fitMode, setFitMode] = useState([
     "contain",
@@ -52,7 +53,7 @@ export default function DisplayGrid({
     } = useDraggable({
       id: `panel-drag-${index}`,
       data: { panelIndex: index },
-      disabled: !src, // only draggable when filled
+      disabled: readOnly || !src, // only draggable when filled
     });
 
     const style = transform
@@ -68,6 +69,7 @@ export default function DisplayGrid({
     };
 
     const handlePanelClick = () => {
+      if (readOnly) return;
       if (!src && selectedSource && onPanelClick) {
         onPanelClick(index);
       }
@@ -84,7 +86,7 @@ export default function DisplayGrid({
         className={`
           relative rounded-xl flex items-center justify-center border-2 border-dashed transition theme-panel
           ${isOver ? "border-blue-400 bg-blue-50" : ""}
-          ${src ? "cursor-move" : selectedSource ? "cursor-pointer" : "cursor-default"}
+          ${src && !readOnly ? "cursor-move" : !src && selectedSource && !readOnly ? "cursor-pointer" : "cursor-default"}
           min-h-[120px] sm:min-h-[160px] lg:min-h-0 lg:h-full
         `}
       >
@@ -129,14 +131,16 @@ export default function DisplayGrid({
               >
                 <Maximize2 className="h-3.5 w-3.5" />
               </button>
-              <button
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => handleRemove(index)}
-                className="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs border-default border text-red-600 bg-surface hover:bg-red-50"
-                title="Remove source"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+              {!readOnly && (
+                <button
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => handleRemove(index)}
+                  className="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs border-default border text-red-600 bg-surface hover:bg-red-50"
+                  title="Remove source"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </>
         ) : (

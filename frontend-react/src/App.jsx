@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import DisplayGrid from "./components/DisplayGrid";
@@ -8,6 +8,15 @@ import LiveChatPanel from "./components/LiveChatPanel";
 import ArchiveTab from "./components/ArchiveTab";
 import AnalyticsTab from "./components/AnalyticsTab";
 import OnboardingModal from "./components/OnboardingModal";
+import {
+  createSession,
+  endSession,
+  getLayout,
+  joinSession,
+  listSessions,
+  publishLayout,
+  startSession,
+} from "./api/sessions";
 
 import {
   DndContext,
@@ -16,7 +25,23 @@ import {
   useSensors,
   closestCenter,
 } from "@dnd-kit/core";
-import { UserCircle, MessageCircle } from "lucide-react";
+import { UserCircle, MessageCircle, CheckCircle2, AlertCircle } from "lucide-react";
+
+const EMPTY_GRID = [null, null, null, null];
+
+function gridToLayout(gridSources) {
+  return {
+    panels: gridSources.map((src, idx) => ({
+      id: `p${idx + 1}`,
+      streamId: src ?? null,
+    })),
+  };
+}
+
+function layoutToGrid(layout) {
+  const panelMap = new Map((layout?.panels || []).map((p) => [p.id, p.streamId ?? null]));
+  return [1, 2, 3, 4].map((index) => panelMap.get(`p${index}`) ?? null);
+}
 
 export default function App() {
   const [role, setRole] = useState("surgeon");
@@ -26,7 +51,6 @@ export default function App() {
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const [patientHasUnsaved, setPatientHasUnsaved] = useState(false);
   const [patientInfo, setPatientInfo] = useState({
     name: "",
     id: "",
@@ -35,32 +59,61 @@ export default function App() {
   });
 
   const [sessionStatus, setSessionStatus] = useState("idle");
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsError, setSessionsError] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
 
-  const [archiveSessions] = useState([
-    {
-      id: 1,
-      surgeon: "Dr. Ivanov",
-      procedure: "Laparoscopic Cholecystectomy",
-      date: "2025-08-10",
-      duration: "01:45:00",
-    },
-    {
-      id: 2,
-      surgeon: "Dr. Müller",
-      procedure: "Neurosurgical Debridement",
-      date: "2025-08-09",
-      duration: "02:15:00",
-    },
-  ]);
-
-  const [gridSources, setGridSources] = useState([null, null, null, null]);
+  const [gridSources, setGridSources] = useState(EMPTY_GRID);
   const [selectedSource, setSelectedSource] = useState(null);
+  const [layoutVersion, setLayoutVersion] = useState(0);
+  const [layoutSyncError, setLayoutSyncError] = useState("");
+  const [presenceCount, setPresenceCount] = useState(0);
+  const [wsConnected, setWsConnected] = useState(false);
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
+  const [toasts, setToasts] = useState([]);
 
-  // onboarding
+  const wsRef = useRef(null);
+  const layoutVersionRef = useRef(0);
+  const publishQueueRef = useRef(Promise.resolve());
+  const toastSeqRef = useRef(0);
+  const canControlSession = role !== "viewer";
+  const canEditLayout = role !== "viewer";
+
+  useEffect(() => {
+    layoutVersionRef.current = layoutVersion;
+  }, [layoutVersion]);
+
+  const applyRemoteLayout = (version, layout) => {
+    layoutVersionRef.current = version;
+    setLayoutVersion(version);
+    setGridSources(layoutToGrid(layout));
+  };
+
+  const pushToast = (kind, message) => {
+    const id = `${Date.now()}-${toastSeqRef.current++}`;
+    setToasts((prev) => [...prev, { id, kind, message }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 2800);
+  };
+
+  const refreshSessions = async (roleForRequest = role) => {
+    setSessionsLoading(true);
+    setSessionsError("");
+    try {
+      const data = await listSessions(roleForRequest);
+      setSessions(data.items || []);
+    } catch (err) {
+      setSessionsError(err instanceof Error ? err.message : "Failed to load sessions");
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
   useEffect(() => {
     try {
       const seen = localStorage.getItem("ls_onboarded") === "1";
@@ -74,7 +127,129 @@ export default function App() {
     }
   }, []);
 
-  // drag & drop sensors
+  useEffect(() => {
+    refreshSessions(role);
+  }, [role]);
+
+  useEffect(() => {
+    if (activeSessionId || sessions.length === 0) return;
+    const preferred = sessions.find((s) => s.status === "LIVE") || sessions[0];
+    setActiveSessionId(preferred.id);
+    if (preferred.status === "LIVE") setSessionStatus("running");
+  }, [sessions, activeSessionId]);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!activeSessionId) {
+        setWsConnected(false);
+        setPresenceCount(0);
+        return;
+      }
+      try {
+        const join = await joinSession(role, activeSessionId);
+        const layout = await getLayout(role, activeSessionId);
+        applyRemoteLayout(layout.version, layout.layout);
+
+        const wsBase = String(join?.realtime?.wsUrl || "").replace(/^http/i, "ws");
+        const wsToken = join?.realtime?.token;
+        if (!wsBase || !wsToken) return;
+
+        const ws = new WebSocket(`${wsBase}?token=${encodeURIComponent(wsToken)}`);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          setWsConnected(true);
+          pushToast("success", "Realtime connected");
+        };
+        ws.onclose = () => setWsConnected(false);
+        ws.onerror = () => {
+          setWsConnected(false);
+          pushToast("error", "Realtime connection issue");
+        };
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            if (message.type === "layout.snapshot" || message.type === "layout.updated") {
+              const payload = message.payload || {};
+              applyRemoteLayout(payload.version || 0, payload.layout || { panels: [] });
+              setLayoutSyncError("");
+            } else if (message.type === "layout.conflict") {
+              const payload = message.payload || {};
+              applyRemoteLayout(payload.version || 0, payload.layout || { panels: [] });
+              setLayoutSyncError("Layout conflict resolved with latest server version.");
+              pushToast("warning", "Layout conflict resolved to latest version");
+            } else if (message.type === "presence.updated") {
+              setPresenceCount(Number(message?.payload?.participants || 0));
+            }
+          } catch {
+            // ignore malformed messages
+          }
+        };
+      } catch (err) {
+        setLayoutSyncError(err instanceof Error ? err.message : "Realtime sync unavailable.");
+        pushToast("error", "Realtime sync unavailable");
+      }
+    };
+
+    run();
+
+    return () => {
+      const ws = wsRef.current;
+      if (ws) ws.close();
+      wsRef.current = null;
+      setWsConnected(false);
+    };
+  }, [activeSessionId, role]);
+
+  const publishGridChange = async (previousGrid, nextGrid) => {
+    if (!activeSessionId || role === "viewer") return;
+    const baseVersion = layoutVersionRef.current;
+    try {
+      const response = await publishLayout(role, activeSessionId, baseVersion, gridToLayout(nextGrid));
+      const nextVersion = response?.version ?? baseVersion;
+      layoutVersionRef.current = nextVersion;
+      setLayoutVersion(nextVersion);
+      setLayoutSyncError("");
+    } catch (err) {
+      if ((err?.status === 409 || err?.code === "LAYOUT_VERSION_CONFLICT") && activeSessionId) {
+        try {
+          const latest = await getLayout(role, activeSessionId);
+          applyRemoteLayout(latest.version, latest.layout);
+          setLayoutSyncError("Layout conflict resolved with latest server version.");
+          pushToast("warning", "Layout conflict resolved with server state");
+          return;
+        } catch {
+          // fall through to rollback
+        }
+      }
+      setGridSources(previousGrid);
+      setLayoutSyncError(err instanceof Error ? err.message : "Failed to sync layout.");
+      pushToast("error", "Layout sync failed");
+    }
+  };
+
+  const queuePublish = (previousGrid, nextGrid) => {
+    publishQueueRef.current = publishQueueRef.current.then(() =>
+      publishGridChange(previousGrid, nextGrid)
+    );
+  };
+
+  const updateGridSources = (updater, { publish = true } = {}) => {
+    let previousSnapshot = null;
+    let nextSnapshot = null;
+    setGridSources((prev) => {
+      previousSnapshot = [...prev];
+      nextSnapshot = typeof updater === "function" ? updater(prev) : updater;
+      return nextSnapshot;
+    });
+
+    if (!publish) return;
+    Promise.resolve().then(() => {
+      if (!nextSnapshot || !previousSnapshot) return;
+      queuePublish(previousSnapshot, [...nextSnapshot]);
+    });
+  };
+
   const sensors = useSensors(useSensor(PointerSensor));
 
   const handleDragEnd = (event) => {
@@ -86,21 +261,17 @@ export default function App() {
     const targetIndex = overData.panelIndex;
     if (typeof targetIndex !== "number") return;
 
-    setGridSources((prev) => {
+    updateGridSources((prev) => {
       const next = [...prev];
 
-      // from sidebar → panel
       if (activeData.src && active.id.toString().startsWith("src-")) {
         const src = activeData.src;
         const prevIndex = next.findIndex((s) => s === src);
-        if (prevIndex !== -1 && prevIndex !== targetIndex) {
-          next[prevIndex] = null;
-        }
+        if (prevIndex !== -1 && prevIndex !== targetIndex) next[prevIndex] = null;
         next[targetIndex] = src;
         return next;
       }
 
-      // between panels
       if (typeof activeData.panelIndex === "number") {
         const from = activeData.panelIndex;
         const to = targetIndex;
@@ -115,32 +286,61 @@ export default function App() {
     });
   };
 
-  // CLICK: select source in sidebar
   const handleSelectSource = (src) => {
     setSelectedSource(src);
   };
 
-  // CLICK: choose panel for selected source
   const handlePanelClick = (index) => {
+    if (!canEditLayout) return;
     if (!selectedSource) return;
-
-    setGridSources((prev) => {
+    updateGridSources((prev) => {
       const next = [...prev];
       const prevIndex = next.findIndex((s) => s === selectedSource);
-      if (prevIndex !== -1 && prevIndex !== index) {
-        next[prevIndex] = null;
-      }
+      if (prevIndex !== -1 && prevIndex !== index) next[prevIndex] = null;
       next[index] = selectedSource;
       return next;
     });
   };
 
-  // session controls
-  const handleStart = () => setSessionStatus("running");
-  const handlePause = () => setSessionStatus("paused");
-  const handleStop = () => setSessionStatus("stopped");
+  const handleStart = async () => {
+    if (!canControlSession) return;
+    try {
+      let sessionId = activeSessionId;
+      if (!sessionId) {
+        const created = await createSession(role, `Live Session ${new Date().toISOString()}`);
+        sessionId = created.id;
+        setActiveSessionId(sessionId);
+      }
+      await startSession(role, sessionId);
+      setSessionStatus("running");
+      await refreshSessions(role);
+      pushToast("success", "Session started");
+    } catch (err) {
+      setSessionsError(err instanceof Error ? err.message : "Could not start session");
+      pushToast("error", "Could not start session");
+    }
+  };
 
-  // keyboard shortcuts
+  const handlePause = () => setSessionStatus("paused");
+
+  const handleStop = async () => {
+    if (!canControlSession) return;
+    try {
+      if (activeSessionId) await endSession(role, activeSessionId);
+      setSessionStatus("stopped");
+      await refreshSessions(role);
+      pushToast("success", "Session stopped");
+    } catch (err) {
+      setSessionsError(err instanceof Error ? err.message : "Could not stop session");
+      pushToast("error", "Could not stop session");
+    }
+  };
+
+  const handleQuickAssign = (panelIndex) => {
+    if (!canEditLayout || !selectedSource) return;
+    handlePanelClick(panelIndex);
+  };
+
   useEffect(() => {
     const isTyping = () => {
       const el = document.activeElement;
@@ -169,7 +369,7 @@ export default function App() {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  });
 
   return (
     <div className="min-h-screen bg-surface text-default flex flex-col">
@@ -182,7 +382,6 @@ export default function App() {
         showGuidePulse={!hasOnboarded}
       />
 
-      {/* Patient Info & Chat – floating bottom-right on all breakpoints */}
       <div className="fixed right-3 bottom-3 z-30 flex flex-col gap-2">
         <button
           type="button"
@@ -210,62 +409,115 @@ export default function App() {
         </button>
       </div>
 
-      {/* MAIN */}
       <main className="flex-1 w-full px-4 py-4 sm:py-6">
+        {toasts.length > 0 && (
+          <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm">
+            {toasts.map((toast) => (
+              <div
+                key={toast.id}
+                className={`theme-panel border-default border px-3 py-2 text-sm flex items-center gap-2 ${
+                  toast.kind === "error" ? "text-red-400" : toast.kind === "warning" ? "text-amber-300" : "text-emerald-300"
+                }`}
+              >
+                {toast.kind === "error" ? (
+                  <AlertCircle className="h-4 w-4" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4" />
+                )}
+                <span className="text-default">{toast.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          {/* ===== Desktop layout (lg+) ===== */}
           <div className="hidden lg:flex flex-col gap-4 h-full min-h-[480px]">
-            {/* LIVE – Sources + Session + Grid */}
             {currentTab === "Live" && (
               <>
-                {/* Header row: Sources (2/3) + Session (1/3) */}
+                <div className="theme-panel p-2 sm:p-3 border-default border">
+                  <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                    <span className={`px-2 py-1 rounded-full border ${sessionStatus === "running" ? "text-emerald-300 border-emerald-500/40" : "text-amber-300 border-amber-500/40"}`}>
+                      {sessionStatus.toUpperCase()}
+                    </span>
+                    <span className="text-subtle">Role:</span>
+                    <span className="badge-btn">{role}</span>
+                    <span className="text-subtle">Session:</span>
+                    <span className="font-mono text-default">{activeSessionId ? activeSessionId.slice(0, 8) : "none"}</span>
+                    <span className="text-subtle">Participants:</span>
+                    <span className="text-default">{presenceCount}</span>
+                    <span className="text-subtle">Sync:</span>
+                    <span className={wsConnected ? "text-emerald-300" : "text-red-400"}>
+                      {wsConnected ? "Connected" : "Offline"}
+                    </span>
+                    <span className="text-subtle">Layout:</span>
+                    <span className="text-default">v{layoutVersion}</span>
+                  </div>
+                  {layoutSyncError && <div className="text-xs text-red-400 mt-1">{layoutSyncError}</div>}
+                </div>
+
                 <div className="grid gap-4 lg:grid-cols-3 items-stretch">
-                  {/* Sources – 2/3 */}
                   <div className="lg:col-span-2">
                     <Sidebar
                       role={role}
                       selectedSource={selectedSource}
                       onSelectSource={handleSelectSource}
                     />
+                    {selectedSource && canEditLayout && (
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-subtle">Assign selected source:</span>
+                        {[0, 1, 2, 3].map((idx) => (
+                          <button
+                            key={idx}
+                            className="badge-btn text-xs"
+                            onClick={() => handleQuickAssign(idx)}
+                          >
+                            P{idx + 1}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Session – 1/3 */}
                   <div className="lg:col-span-1 theme-panel p-3 sm:p-4 shadow flex flex-col justify-center">
                     <SessionControls
                       onStart={handleStart}
                       onPause={handlePause}
                       onStop={handleStop}
                       status={sessionStatus}
+                      canControl={canControlSession}
+                      readOnlyReason="Viewer role cannot control the session."
                     />
                   </div>
                 </div>
 
-                {/* 2×2 display grid – viewport-bounded */}
                 <div className="theme-panel p-3 sm:p-4 shadow flex flex-col flex-1 min-h-0 mt-4">
                   <div className="ls-live-grid-shell">
                     <DisplayGrid
                       gridSources={gridSources}
-                      setGridSources={setGridSources}
+                      setGridSources={updateGridSources}
                       selectedSource={selectedSource}
                       onPanelClick={handlePanelClick}
+                      readOnly={!canEditLayout}
                     />
                   </div>
                 </div>
               </>
             )}
 
-            {/* ARCHIVE – no sources/session */}
             {currentTab === "Archive" && (
               <div className="theme-panel p-3 sm:p-4 shadow flex-1 min-h-0">
-                <ArchiveTab sessions={archiveSessions} />
+                <ArchiveTab
+                  sessions={sessions}
+                  loading={sessionsLoading}
+                  error={sessionsError}
+                />
               </div>
             )}
 
-            {/* ANALYTICS – no sources/session */}
             {currentTab === "Analytics" && (
               <div className="theme-panel p-3 sm:p-4 shadow flex-1 min-h-0">
                 <AnalyticsTab />
@@ -273,51 +525,80 @@ export default function App() {
             )}
           </div>
 
-          {/* ===== Mobile / tablet (< lg) ===== */}
           <div className="flex flex-col lg:hidden gap-4 h-full min-h-[480px]">
-            {/* LIVE – Sources + Session + Grid */}
             {currentTab === "Live" && (
               <>
-                {/* Sources bar */}
+                <div className="theme-panel p-2 sm:p-3 border-default border">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className={`px-2 py-1 rounded-full border ${sessionStatus === "running" ? "text-emerald-300 border-emerald-500/40" : "text-amber-300 border-amber-500/40"}`}>
+                      {sessionStatus.toUpperCase()}
+                    </span>
+                    <span className="text-subtle">Sync:</span>
+                    <span className={wsConnected ? "text-emerald-300" : "text-red-400"}>
+                      {wsConnected ? "Connected" : "Offline"}
+                    </span>
+                    <span className="text-subtle">Participants:</span>
+                    <span className="text-default">{presenceCount}</span>
+                    <span className="text-subtle">Layout:</span>
+                    <span className="text-default">v{layoutVersion}</span>
+                  </div>
+                </div>
+
                 <Sidebar
                   role={role}
                   selectedSource={selectedSource}
                   onSelectSource={handleSelectSource}
                 />
+                {selectedSource && canEditLayout && (
+                  <div className="mt-1 flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-subtle">Assign:</span>
+                    {[0, 1, 2, 3].map((idx) => (
+                      <button
+                        key={idx}
+                        className="badge-btn text-xs"
+                        onClick={() => handleQuickAssign(idx)}
+                      >
+                        P{idx + 1}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
-                {/* Session + Grid */}
                 <div className="flex-1 theme-panel p-3 sm:p-4 shadow relative flex flex-col min-h-0">
-                  {/* Session card */}
                   <div className="theme-panel p-3 sm:p-4 mb-3">
                     <SessionControls
                       onStart={handleStart}
                       onPause={handlePause}
                       onStop={handleStop}
                       status={sessionStatus}
+                      canControl={canControlSession}
+                      readOnlyReason="Viewer role cannot control the session."
                     />
                   </div>
 
-                  {/* 2×2 grid */}
                   <div className="mt-3">
                     <DisplayGrid
                       gridSources={gridSources}
-                      setGridSources={setGridSources}
+                      setGridSources={updateGridSources}
                       selectedSource={selectedSource}
                       onPanelClick={handlePanelClick}
+                      readOnly={!canEditLayout}
                     />
                   </div>
                 </div>
               </>
             )}
 
-            {/* ARCHIVE – full-width card */}
             {currentTab === "Archive" && (
               <div className="flex-1 theme-panel p-3 sm:p-4 shadow flex flex-col min-h-0">
-                <ArchiveTab sessions={archiveSessions} />
+                <ArchiveTab
+                  sessions={sessions}
+                  loading={sessionsLoading}
+                  error={sessionsError}
+                />
               </div>
             )}
 
-            {/* ANALYTICS – full-width card */}
             {currentTab === "Analytics" && (
               <div className="flex-1 theme-panel p-3 sm:p-4 shadow flex flex-col min-h-0">
                 <AnalyticsTab />
@@ -326,7 +607,6 @@ export default function App() {
           </div>
         </DndContext>
 
-        {/* Patient Info – slide from right */}
         {showPatientInfoPanel && (
           <div
             className="ls-slide-overlay"
@@ -341,7 +621,6 @@ export default function App() {
                 patientInfo={patientInfo}
                 onUpdate={(info) => {
                   setPatientInfo(info);
-                  setPatientHasUnsaved(false);
                   try {
                     localStorage.setItem("ls_onboarded", "1");
                     setHasOnboarded(true);
@@ -350,13 +629,12 @@ export default function App() {
                   }
                 }}
                 onClose={() => setShowPatientInfoPanel(false)}
-                onDirtyChange={setPatientHasUnsaved}
+                onDirtyChange={() => {}}
               />
             </div>
           </div>
         )}
 
-        {/* Live Chat – slide from right */}
         {showChatPanel && (
           <div
             className="ls-slide-overlay"
