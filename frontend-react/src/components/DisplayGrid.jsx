@@ -3,6 +3,13 @@ import { LayoutDashboard, X, Maximize2 } from "lucide-react";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 
+const SRC_LABEL = {
+  "endoscope.mp4": "Endoscope",
+  "microscope.mp4": "Microscope",
+  "ptz.mp4": "PTZ Camera",
+  "vital_signs.mp4": "Monitor Capture",
+};
+
 export default function DisplayGrid({
   gridSources = [null, null, null, null],
   setGridSources,
@@ -136,12 +143,19 @@ export default function DisplayGrid({
                 <button
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => handleRemove(index)}
-                  className="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs border-default border text-red-600 bg-surface hover:bg-red-50"
+                  className="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs border-default border text-red-500 bg-surface hover:bg-red-500/10"
                   title="Remove source"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
+            </div>
+
+            {/* Source label chip */}
+            <div className="absolute bottom-2 left-2 pointer-events-none">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/55 text-white backdrop-blur-sm">
+                {SRC_LABEL[src] ?? src}
+              </span>
             </div>
           </>
         ) : (
