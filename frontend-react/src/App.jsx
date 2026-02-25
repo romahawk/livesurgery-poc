@@ -25,7 +25,7 @@ import {
   useSensors,
   closestCenter,
 } from "@dnd-kit/core";
-import { UserCircle, MessageCircle, CheckCircle2, AlertCircle } from "lucide-react";
+import { UserCircle, MessageCircle, CheckCircle2, AlertCircle, Users, Wifi, WifiOff, LayoutDashboard } from "lucide-react";
 
 const EMPTY_GRID = [null, null, null, null];
 const CATALOG_SOURCES = ["endoscope.mp4", "microscope.mp4", "ptz.mp4", "vital_signs.mp4"];
@@ -82,6 +82,7 @@ export default function App() {
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [canUndoLayout, setCanUndoLayout] = useState(false);
+  const [activePreset, setActivePreset] = useState(null);
   const [followPresenter, setFollowPresenter] = useState(true);
   const [queuedPresenterLayout, setQueuedPresenterLayout] = useState(null);
 
@@ -370,6 +371,7 @@ export default function App() {
     const nextMode =
       presetId === "teaching" ? "3x1" : presetId === "focus" ? "1x1" : "2x2";
     setLayoutMode(nextMode);
+    setActivePreset(presetId === "clear" ? null : presetId);
     updateGridSources(next, { publish: true, trackHistory: true });
     pushToast("success", `Layout preset applied: ${presetId}`);
   };
@@ -385,6 +387,7 @@ export default function App() {
     const previous = layoutHistoryRef.current[layoutHistoryRef.current.length - 1];
     layoutHistoryRef.current = layoutHistoryRef.current.slice(0, -1);
     setCanUndoLayout(layoutHistoryRef.current.length > 0);
+    setActivePreset(null);
     updateGridSources(previous, { publish: true, trackHistory: false });
     pushToast("success", "Layout undo applied");
   };
@@ -394,6 +397,7 @@ export default function App() {
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (!active || !over) return;
+    setActivePreset(null);
 
     const activeData = active.data.current || {};
     const overData = over.data.current || {};
@@ -598,20 +602,33 @@ export default function App() {
 
       <main className="flex-1 w-full px-4 py-4 sm:py-6 lg:py-2 lg:overflow-hidden">
         {toasts.length > 0 && (
-          <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm">
+          <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
             {toasts.map((toast) => (
               <div
                 key={toast.id}
-                className={`theme-panel border-default border px-3 py-2 text-sm flex items-center gap-2 ${
-                  toast.kind === "error" ? "text-red-400" : toast.kind === "warning" ? "text-amber-300" : "text-emerald-300"
+                className={`ls-toast pointer-events-auto rounded-lg shadow-lg border px-3 py-2.5 text-sm flex items-center gap-2.5 bg-surface ${
+                  toast.kind === "error"
+                    ? "border-red-500/40 text-red-400"
+                    : toast.kind === "warning"
+                      ? "border-amber-500/40 text-amber-300"
+                      : "border-emerald-500/40 text-emerald-400"
                 }`}
               >
                 {toast.kind === "error" ? (
-                  <AlertCircle className="h-4 w-4" />
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                ) : toast.kind === "warning" ? (
+                  <AlertCircle className="h-4 w-4 shrink-0" />
                 ) : (
-                  <CheckCircle2 className="h-4 w-4" />
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
                 )}
-                <span className="text-default">{toast.message}</span>
+                <span className="text-default flex-1 text-xs sm:text-sm">{toast.message}</span>
+                <button
+                  onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+                  className="shrink-0 text-subtle hover:text-default transition-colors"
+                  aria-label="Dismiss"
+                >
+                  ×
+                </button>
               </div>
             ))}
           </div>
@@ -627,19 +644,34 @@ export default function App() {
               <>
                 <div className="theme-panel p-1.5 sm:p-2 border-default border">
                   <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs">
-                    <span className={`px-2 py-1 rounded-full border ${sessionStatus === "running" ? "text-emerald-300 border-emerald-500/40" : "text-amber-300 border-amber-500/40"}`}>
+                    {/* Session status badge */}
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border font-medium ${sessionStatus === "running" ? "text-emerald-400 border-emerald-500/50" : "text-amber-300 border-amber-500/40"}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${sessionStatus === "running" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} aria-hidden />
                       {sessionStatus.toUpperCase()}
                     </span>
                     <span className="text-subtle">Role:</span>
                     <span className="badge-btn">{role}</span>
                     <span className="text-subtle">Session:</span>
                     <span className="font-mono text-default">{activeSessionId ? activeSessionId.slice(0, 8) : "none"}</span>
-                    <span className="text-subtle">Participants:</span>
-                    <span className="text-default">{presenceCount}</span>
-                    <span className="text-subtle">Sync:</span>
-                    <span className={syncClass}>{syncLabel}</span>
-                    <span className="text-subtle">Layout:</span>
-                    <span className="text-default">v{layoutVersion} ({layoutMode})</span>
+                    {/* Participants */}
+                    <span className="inline-flex items-center gap-1 text-subtle">
+                      <Users className="h-3 w-3" aria-hidden />
+                      <span className="text-default">{presenceCount}</span>
+                    </span>
+                    {/* Sync status */}
+                    <span className={`inline-flex items-center gap-1 ${syncClass}`}>
+                      {wsState === "connected" ? (
+                        <Wifi className="h-3 w-3" aria-hidden />
+                      ) : (
+                        <WifiOff className="h-3 w-3" aria-hidden />
+                      )}
+                      {syncLabel}
+                    </span>
+                    {/* Layout version */}
+                    <span className="inline-flex items-center gap-1 text-subtle">
+                      <LayoutDashboard className="h-3 w-3" aria-hidden />
+                      <span className="text-default">v{layoutVersion} · {layoutMode}</span>
+                    </span>
                   </div>
                   {layoutSyncError && <div className="text-xs text-red-400 mt-1">{layoutSyncError}</div>}
                   {role === "viewer" && (
@@ -696,9 +728,19 @@ export default function App() {
                     <>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span className="text-xs text-subtle">Layout actions</span>
-                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("quad")}>Quad</button>
-                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("focus")}>Focus</button>
-                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("teaching")}>Teaching</button>
+                        {[
+                          { id: "quad", label: "Quad" },
+                          { id: "focus", label: "Focus" },
+                          { id: "teaching", label: "Teaching" },
+                        ].map(({ id, label }) => (
+                          <button
+                            key={id}
+                            className={`badge-btn text-xs ${activePreset === id ? "ring-1 ring-teal-400 text-teal-400" : ""}`}
+                            onClick={() => applyLayoutPreset(id)}
+                          >
+                            {label}
+                          </button>
+                        ))}
                         <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("clear")}>Reset</button>
                         <button className="badge-btn text-xs" onClick={handleUndoLayout} disabled={!canUndoLayout}>Undo</button>
                       </div>

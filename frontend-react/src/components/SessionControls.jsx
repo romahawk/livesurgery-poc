@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Clock4, Play, Pause, Square } from "lucide-react";
+import { Clock4, Play, Pause, Square, Circle } from "lucide-react";
 
 export default function SessionControls({
   onStart,
@@ -67,9 +67,18 @@ export default function SessionControls({
     <div className="p-2.5 theme-panel mb-0">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="text-xs sm:text-sm inline-flex items-center gap-2 text-default">
-          <Clock4 className="h-4 w-4" aria-hidden />
+          {status === "running" ? (
+            <span className="inline-flex items-center gap-1.5 text-rose-400">
+              <Circle className="h-2.5 w-2.5 fill-rose-500 text-rose-500 animate-pulse" aria-hidden />
+              <span className="font-bold tracking-widest text-[10px] uppercase">REC</span>
+            </span>
+          ) : (
+            <Clock4 className="h-4 w-4" aria-hidden />
+          )}
           <strong>Session Time:</strong>
-          <span>{formatTime(timer)}</span>
+          <span className={status === "running" ? "tabular-nums text-emerald-400" : "tabular-nums"}>
+            {formatTime(timer)}
+          </span>
         </div>
 
         {!hideActions && (
