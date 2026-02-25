@@ -1,6 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-
-const ThemeCtx = createContext({ theme: "light", setTheme: () => {}, toggle: () => {} });
+import { useEffect, useMemo, useState } from "react";
+import { ThemeCtx } from "./ThemeContext";
 
 function applyHtmlTheme(theme) {
   const html = document.documentElement;
@@ -38,5 +37,3 @@ export function ThemeProvider({ children }) {
 
   return <ThemeCtx.Provider value={value}>{children}</ThemeCtx.Provider>;
 }
-
-export const useTheme = () => useContext(ThemeCtx);

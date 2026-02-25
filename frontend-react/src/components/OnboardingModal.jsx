@@ -30,7 +30,7 @@ export default function OnboardingModal({ onClose }) {
   }, [onClose]);
 
   const finish = () => {
-    try { localStorage.setItem("ls_onboarded", "1"); } catch {}
+    try { localStorage.setItem("ls_onboarded", "1"); } catch { /* ignore */ }
     onClose();
   };
 

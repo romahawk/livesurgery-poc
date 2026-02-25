@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import DisplayGrid from "./components/DisplayGrid";
@@ -92,6 +92,7 @@ export default function App() {
   const reconnectTimerRef = useRef(null);
   const layoutHistoryRef = useRef([]);
   const followPresenterRef = useRef(followPresenter);
+  const wsReconnectCountRef = useRef(wsReconnectCount);
   const canControlSession = role !== "viewer";
   const canEditLayout = role !== "viewer";
   const syncLabel =
@@ -117,6 +118,10 @@ export default function App() {
     layoutVersionRef.current = layoutVersion;
   }, [layoutVersion]);
 
+  useEffect(() => {
+    wsReconnectCountRef.current = wsReconnectCount;
+  }, [wsReconnectCount]);
+
   const applyRemoteLayout = (version, layout) => {
     layoutVersionRef.current = version;
     setLayoutVersion(version);
@@ -133,7 +138,7 @@ export default function App() {
     }, 2800);
   };
 
-  const refreshSessions = async (roleForRequest = role) => {
+  const refreshSessions = useCallback(async (roleForRequest = role) => {
     setSessionsLoading(true);
     setSessionsError("");
     try {
@@ -144,7 +149,7 @@ export default function App() {
     } finally {
       setSessionsLoading(false);
     }
-  };
+  }, [role]);
 
   useEffect(() => {
     try {
@@ -161,7 +166,7 @@ export default function App() {
 
   useEffect(() => {
     refreshSessions(role);
-  }, [role]);
+  }, [role, refreshSessions]);
 
   useEffect(() => {
     if (role !== "viewer") {
@@ -216,7 +221,7 @@ export default function App() {
         return;
       }
 
-      setWsState(wsReconnectCount > 0 ? "reconnecting" : "connecting");
+      setWsState(wsReconnectCountRef.current > 0 ? "reconnecting" : "connecting");
       try {
         const join = await joinSession(role, activeSessionId);
         const layout = await getLayout(role, activeSessionId);
@@ -238,7 +243,7 @@ export default function App() {
           clearTimeout(reconnectTimerRef.current);
           setWsConnected(true);
           setWsState("connected");
-          if (wsReconnectCount > 0) pushToast("success", "Realtime reconnected");
+          if (wsReconnectCountRef.current > 0) pushToast("success", "Realtime reconnected");
           setWsReconnectCount(0);
         };
         ws.onclose = () => {
@@ -278,7 +283,7 @@ export default function App() {
       } catch (err) {
         if (disposed) return;
         setLayoutSyncError(err instanceof Error ? err.message : "Realtime sync unavailable.");
-        if (wsReconnectCount === 0) pushToast("error", "Realtime sync unavailable");
+        if (wsReconnectCountRef.current === 0) pushToast("error", "Realtime sync unavailable");
         scheduleReconnect();
       }
     };
