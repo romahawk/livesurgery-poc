@@ -1,4 +1,4 @@
-import { useTheme } from "../theme/ThemeProvider";
+import { useTheme } from "../theme/useTheme";
 import { Sun, Moon } from "lucide-react";
 
 /** Pill-style toggle that fits the app's UI */

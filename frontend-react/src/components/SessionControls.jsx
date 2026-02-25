@@ -25,13 +25,16 @@ export default function SessionControls({
   });
 
   const intervalRef = useRef(null);
+  // Stable ref so the effect can read the current timer without re-running on every tick
+  const timerRef = useRef(timer);
+  timerRef.current = timer;
 
   useEffect(() => {
     if (status === "running") {
       // If starting fresh, record the start time
       if (!localStorage.getItem("ls_session_start")) {
         localStorage.setItem("ls_session_start", Date.now().toString());
-        localStorage.setItem("ls_session_offset", timer.toString());
+        localStorage.setItem("ls_session_offset", timerRef.current.toString());
       }
 
       intervalRef.current = setInterval(() => {
