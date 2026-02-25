@@ -45,5 +45,9 @@ venv/
 backend/.venv/
 backend/venv/
 
+# SQLite database (generated at runtime by init_db() — never commit)
+backend/app/data/livesurgery.db
+backend/app/data/*.db
+
 # Tooling
 .vercel/
