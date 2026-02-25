@@ -86,7 +86,7 @@ export default function DisplayGrid({
         onDoubleClick={(e) => src && toggleFullscreen(e.currentTarget)}
         className={`
           relative rounded-xl flex items-center justify-center border-2 border-dashed transition theme-panel
-          ${isOver ? "border-blue-400 bg-blue-50" : ""}
+          ${isOver ? "border-blue-400 bg-blue-500/10 dark:bg-blue-400/15" : ""}
           ${src && !readOnly ? "cursor-move" : !src && selectedSource && !readOnly ? "cursor-pointer" : "cursor-default"}
           min-h-[120px] sm:min-h-[160px] lg:min-h-0 lg:h-full
         `}

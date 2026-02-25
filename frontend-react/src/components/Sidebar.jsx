@@ -23,9 +23,9 @@ const STATUS_DOT = {
 };
 
 const STATUS_PILL = {
-  live: "border-green-600 text-green-700 bg-green-50",
-  offline: "border-gray-300 text-gray-500 bg-gray-50",
-  muted: "border-amber-500 text-amber-600 bg-amber-50",
+  live:    "border-emerald-500 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30",
+  offline: "border-slate-400   text-slate-500   dark:text-slate-400   bg-slate-50   dark:bg-slate-800/40",
+  muted:   "border-amber-500   text-amber-600   dark:text-amber-400   bg-amber-50   dark:bg-amber-900/30",
 };
 
 function DraggableSource({ source, selected, onSelect }) {

@@ -380,3 +380,12 @@ html, body, #root {
 .bg-surface { background: var(--bg); }
 .text-default { color: var(--text); }
 .border-default { border-color: var(--border); }
+
+/* -------------------- TOAST -------------------- */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(0.75rem); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.ls-toast {
+  animation: toast-in 0.18s ease-out both;
+}
