@@ -1,84 +1,180 @@
 # LiveSurgery
 
-A **simulated Operating Room (OR) workspace** web experience built as a **frontend-only Proof of Concept (PoC)** today, designed to evolve into an **MVP with real-time streaming, collaboration, authentication, and persistence**, and later a production-grade MedTech-adjacent system.
+A **simulated Operating Room (OR) workspace** — a full-stack web application built as a
+**Proof of Concept** demonstrating real-time multi-user collaboration, role-based access control,
+and a multi-panel video workspace. Designed to evolve into an MVP with live WebRTC streaming.
 
-> **Disclaimer:** The PoC is **not for clinical use**. The MVP/Production sections are targets (architecture intent), not claims of implemented functionality.
-
----
-
-## Quick links (placeholders)
-## 🔗 Quick Links
-
-- [README](https://github.com/romahawk/livesurgery-poc/blob/main/README.md)
-- [Architecture](https://github.com/romahawk/livesurgery-poc/blob/main/docs/architecture.md)
-- [PRD](https://github.com/romahawk/livesurgery-poc/blob/main/docs/prd.md)
-- [Roadmap](https://github.com/romahawk/livesurgery-poc/blob/main/docs/roadmap.md)
+> **Disclaimer:** This project is **not for clinical use** and does not store patient data.
+> It is a portfolio/demonstration project.
 
 ---
 
-## What exists today
+## 30-second pitch
 
-### NOW (PoC)
-- **Frontend-only** React + Tailwind (Vite) app deployed on **Vercel**
-- Multi-panel “OR workspace” UI
-- **HTML5 video assets** (not streaming)
-- Source selector sidebar
-- Drag-and-drop / resize / layout controls (client-only)
-- Simulated roles/personas (Surgeon / Observer / Admin) for storytelling
-- **No backend**, no auth, no persistence, no WebRTC
-
-### NEXT (MVP target)
-- Auth + RBAC (Surgeon/Observer/Admin)
-- Multi-user sessions with real-time collaboration
-- Real-time streaming via **WebRTC SFU**
-- Persistence of sessions, participants, layouts
-- Recording → archive + replay
-
-### FUTURE (Production target)
-- Compliance hardening (audit-grade trails, policies, tenancy)
-- Enterprise deployment options (self-host, multi-region)
-- Device interoperability layer (ingest, hospital IT integration)
+Medical procedures involve multiple video feeds (endoscope, microscope, PTZ camera, vitals monitor)
+viewed simultaneously by surgeons, remote experts, and trainees. LiveSurgery provides a
+**synchronized, multi-panel OR workspace** where roles control who can see and who can interact —
+in real time. Today it runs on simulated video; the architecture is ready for WebRTC SFU integration.
 
 ---
 
-## Run locally (PoC)
+## Live demo
+
+**Frontend:** [https://livesurgery.vercel.app](https://livesurgery.vercel.app)
+
+> The live demo connects to a local backend — layout sync and session persistence require
+> running the backend locally (see setup below).
+
+---
+
+## What exists today (PoC)
+
+| Capability | Status |
+|---|---|
+| Multi-panel OR workspace UI (2x2, 3x1, 1x3, 1x1 modes) | Done |
+| Drag-and-drop source assignment across panels | Done |
+| Layout presets (Quad, Focus, Teaching) + undo history | Done |
+| Role-based access (Surgeon / Observer / Viewer) | Done |
+| Session CRUD (create, list, start, end) | Done |
+| WebSocket real-time layout sync + presence | Done |
+| Layout versioning + conflict resolution (optimistic concurrency) | Done |
+| Simulated video assets (HTML5) | Done |
+| Archive tab (mock data) | Done |
+| Analytics dashboard (mock data) | Done |
+| Dark / light theme | Done |
+| Onboarding modal + keyboard shortcuts | Done |
+| CI pipeline (lint, build, ruff, black, pytest) | Done |
+
+## What comes next (MVP targets)
+
+- Real authentication (OIDC/JWT) replacing the dev-header scaffold
+- WebRTC SFU for live video streaming
+- Recording → archive storage (object storage)
+- Deployed backend (currently frontend-only on Vercel)
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, Vite 7, Tailwind CSS 3 |
+| Drag-and-drop | @dnd-kit/core |
+| Charts | Recharts |
+| Backend | FastAPI (Python 3.13), Uvicorn |
+| Persistence | SQLite (file-based, Postgres-ready) |
+| Realtime | WebSocket (FastAPI + custom HMAC tokens) |
+| CI | GitHub Actions |
+| Frontend deploy | Vercel |
+
+---
+
+## Local setup
+
+### Prerequisites
+
+- Node.js 20+
+- Python 3.13+
+
+### Backend
 
 ```bash
+cd backend
+python -m venv venv
+source venv/bin/activate      # macOS/Linux
+# venv\Scripts\activate       # Windows
+
+pip install -r requirements.txt
+cp ../.env.example .env       # review and set WS_JWT_SECRET
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+Backend runs at: `http://localhost:8000`
+API docs: `http://localhost:8000/docs`
+
+### Frontend
+
+```bash
+cd frontend-react
 npm install
 npm run dev
 ```
 
-Build/preview:
+Frontend runs at: `http://localhost:5173`
+
+### Combined (scripts)
+
 ```bash
+./scripts/dev.sh      # macOS/Linux
+.\scripts\dev.ps1     # Windows PowerShell
+```
+
+---
+
+## Quality checks
+
+```bash
+# Frontend
+cd frontend-react
+npm run lint
 npm run build
-npm run preview
+npm run format:check
+
+# Backend
+cd backend
+ruff check app tests
+black --check app tests
+pytest tests -q
 ```
 
 ---
 
-## Demo
-- Live demo: https://livesurgery.vercel.app/
+## Project structure
 
----
-
-## Repo structure (suggested)
-
-```txt
+```
 /
-  src/
-    app/                 # shell, routing, providers
-    components/          # reusable UI components
-    features/
-      workspace/         # multi-panel OR workspace (PoC core)
-      video/             # video asset + source selection
-      roles/             # simulated personas and UI gating
-    assets/              # video files, thumbnails (PoC)
-  docs/
-    architecture.md
-    prd.md
-    roadmap.md
-  public/
+├── backend/
+│   ├── app/
+│   │   ├── core/          # auth, database, errors
+│   │   ├── routes/        # sessions, realtime (WebSocket), video
+│   │   ├── services/      # realtime_hub, layouts, video_stream
+│   │   ├── schemas/       # Pydantic request/response models
+│   │   └── main.py
+│   ├── tests/
+│   └── requirements.txt
+├── frontend-react/
+│   ├── src/
+│   │   ├── api/           # typed fetch client
+│   │   ├── components/    # Navbar, Sidebar, DisplayGrid, SessionControls, ...
+│   │   ├── data/          # mock data (archive, analytics)
+│   │   └── theme/         # ThemeProvider context
+│   └── public/videos/     # HTML5 video assets
+├── docs/
+│   ├── prd.md
+│   ├── architecture.md
+│   ├── roadmap.md
+│   ├── DECISIONS_LOG.md
+│   └── SPRINTS/           # sprint-01 through sprint-05
+├── .github/
+│   ├── workflows/ci.yml
+│   └── ISSUE_TEMPLATE/
+├── .env.example
+├── CHANGELOG.md
+└── CONTRIBUTING.md
 ```
+
+---
+
+## Docs
+
+| Document | Description |
+|---|---|
+| [Architecture](docs/architecture.md) | C4 diagrams, data model, realtime design |
+| [PRD](docs/prd.md) | Requirements, user journeys, success metrics |
+| [Roadmap](docs/roadmap.md) | Weekly outcomes, milestones, freeze list |
+| [Decisions Log](docs/DECISIONS_LOG.md) | ADR-style architectural decisions |
+| [Changelog](CHANGELOG.md) | What changed and when |
+| [Contributing](CONTRIBUTING.md) | Local setup, PR process |
 
 ---
 
@@ -86,6 +182,8 @@ npm run preview
 
 | Phase | Outcome | Notes |
 |---|---|---|
-| NOW (PoC) | UI-only simulated OR workspace | Portfolio-ready interaction demo |
-| NEXT (MVP) | Real-time sessions + auth + persistence | Managed services, incremental migration |
-| FUTURE | Compliance & enterprise readiness | Stronger security, audit, interoperability |
+| NOW (PoC) | Full-stack simulated OR workspace | Deployed frontend, local backend |
+| NEXT (MVP) | Real auth + WebRTC + deployed backend | Managed services, incremental |
+| FUTURE | Compliance + enterprise readiness | Audit trails, SSO, multi-tenant |
+
+See [docs/roadmap.md](docs/roadmap.md) for the detailed weekly delivery plan.
