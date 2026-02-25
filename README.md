@@ -129,6 +129,38 @@ pytest tests -q
 
 ---
 
+## API quick reference
+
+With the backend running at `http://localhost:8000`:
+
+| Endpoint | Auth | Description |
+|---|---|---|
+| `GET /healthz` | none | Liveness + DB readiness |
+| `POST /auth/token` | none | Mint a dev API token |
+| `GET /v1/sessions` | Bearer | List sessions for current user |
+| `POST /v1/sessions` | Bearer (Surgeon/Admin) | Create a session |
+| `POST /v1/sessions/{id}/start` | Bearer (Surgeon/Admin) | Start a session |
+| `POST /v1/sessions/{id}/end` | Bearer (Surgeon/Admin) | End a session |
+| `POST /v1/sessions/{id}/participants:join` | Bearer | Join + get WS token |
+| `GET /v1/sessions/{id}/layout` | Bearer | Get current layout |
+| `POST /v1/sessions/{id}/layout` | Bearer (Surgeon/Admin) | Publish layout update |
+| `WS /ws/sessions/{id}?token=<ws-token>` | WS token | Realtime layout + presence |
+| `GET /docs` | none | Interactive OpenAPI UI |
+
+### Get a token (curl)
+
+```bash
+curl -s -X POST http://localhost:8000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "test-surgeon", "role": "SURGEON"}' | jq .
+```
+
+Valid roles: `SURGEON` | `OBSERVER` | `ADMIN`
+
+See [docs/AUTH_MIGRATION.md](docs/AUTH_MIGRATION.md) for the full token flow and OIDC migration path.
+
+---
+
 ## Project structure
 
 ```

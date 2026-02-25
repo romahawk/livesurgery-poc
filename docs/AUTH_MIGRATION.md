@@ -17,6 +17,41 @@ The app uses two layers of dev auth:
 The single function to replace is `get_current_principal()` in `backend/app/core/auth.py`.
 The frontend change is in `ensureToken()` in `frontend-react/src/api/sessions.js`.
 
+### Quick test (backend running at localhost:8000)
+
+```bash
+# 1. Mint a token
+curl -s -X POST http://localhost:8000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "test-surgeon", "role": "SURGEON"}' | jq .
+
+# Expected response:
+# {
+#   "token": "eyJ...<base64-claims>.<hmac-sig>",
+#   "userId": "test-surgeon",
+#   "role": "SURGEON",
+#   "expiresAt": "2026-02-26T00:00:00+00:00"
+# }
+
+# 2. Use the token to call a protected endpoint
+TOKEN=$(curl -s -X POST http://localhost:8000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "test-surgeon", "role": "SURGEON"}' | jq -r .token)
+
+curl -s http://localhost:8000/v1/sessions \
+  -H "Authorization: Bearer $TOKEN" | jq .
+
+# 3. Verify rejection of a bad token
+curl -s http://localhost:8000/v1/sessions \
+  -H "Authorization: Bearer invalid.token" | jq .
+# → {"error": {"code": "INVALID_TOKEN", "message": "Bearer token is invalid or expired", ...}}
+
+# 4. Verify the OpenAPI docs show the /auth endpoint
+open http://localhost:8000/docs   # or visit in browser
+```
+
+**Valid roles:** `SURGEON` | `OBSERVER` | `ADMIN` (case-insensitive; `VIEWER` maps to `OBSERVER`)
+
 ---
 
 ## Step 1: Choose an IdP
