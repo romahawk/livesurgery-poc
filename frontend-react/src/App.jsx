@@ -947,6 +947,7 @@ export default function App() {
                       role={role}
                       selectedSource={selectedSource}
                       onSelectSource={handleSelectSource}
+                      gridSources={gridSources}
                     />
                     {selectedSource && canEditLayout && (
                       <div className="mt-1 flex items-center gap-1.5 flex-wrap">
@@ -1105,6 +1106,7 @@ export default function App() {
                   role={role}
                   selectedSource={selectedSource}
                   onSelectSource={handleSelectSource}
+                  gridSources={gridSources}
                 />
                 {selectedSource && canEditLayout && (
                   <div className="mt-1 flex items-center gap-2 flex-wrap">
