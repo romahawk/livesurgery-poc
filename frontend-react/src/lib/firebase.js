@@ -19,11 +19,6 @@ export const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey && firebaseConfig.projectId
 );
 
-// DEBUG — remove once Firebase is confirmed working
-console.log("[firebase] isFirebaseConfigured:", isFirebaseConfigured);
-console.log("[firebase] apiKey present:", Boolean(firebaseConfig.apiKey));
-console.log("[firebase] projectId:", firebaseConfig.projectId);
-
 let _db = null;
 let _auth = null;
 let _authInitPromise = null;
