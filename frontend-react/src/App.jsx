@@ -550,8 +550,10 @@ export default function App() {
       await refreshSessions(role);
       pushToast("success", "Session started");
     } catch (err) {
-      setSessionsError(err instanceof Error ? err.message : "Could not start session");
-      pushToast("error", "Could not start session");
+      const msg = err instanceof Error ? err.message : "Could not start session";
+      console.error("[handleStart]", err);
+      setSessionsError(msg);
+      pushToast("error", msg);
     }
   };
 
