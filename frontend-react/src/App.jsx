@@ -25,7 +25,7 @@ import {
   useSensors,
   closestCenter,
 } from "@dnd-kit/core";
-import { UserCircle, MessageCircle, CheckCircle2, AlertCircle, Users, Wifi, WifiOff, LayoutDashboard } from "lucide-react";
+import { UserCircle, MessageCircle, CheckCircle2, AlertCircle, Users, Wifi, WifiOff, LayoutDashboard, X, Keyboard } from "lucide-react";
 
 const EMPTY_GRID = [null, null, null, null];
 const CATALOG_SOURCES = ["endoscope.mp4", "microscope.mp4", "ptz.mp4", "vital_signs.mp4"];
@@ -83,6 +83,7 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const [canUndoLayout, setCanUndoLayout] = useState(false);
   const [activePreset, setActivePreset] = useState(null);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [followPresenter, setFollowPresenter] = useState(true);
   const [queuedPresenterLayout, setQueuedPresenterLayout] = useState(null);
 
@@ -546,6 +547,7 @@ export default function App() {
     };
 
     const onKey = (e) => {
+      if (e.key === "Escape") { setShowShortcutsHelp(false); return; }
       if (isTyping()) return;
       const key = e.key?.toLowerCase();
       if (key === "s") handleStart();
@@ -555,7 +557,7 @@ export default function App() {
       else if (key === "c") {
         setShowChatPanel(true);
         setUnreadCount(0);
-      }
+      } else if (key === "?") setShowShortcutsHelp((v) => !v);
     };
 
     window.addEventListener("keydown", onKey);
@@ -574,6 +576,15 @@ export default function App() {
       />
 
       <div className="fixed right-3 bottom-3 z-30 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => setShowShortcutsHelp((v) => !v)}
+          className="rounded-full h-8 w-8 flex items-center justify-center theme-panel shadow text-subtle hover:text-default transition-colors"
+          title="Keyboard shortcuts (?)"
+          aria-label="Show keyboard shortcuts"
+        >
+          <Keyboard className="h-4 w-4" />
+        </button>
         <button
           type="button"
           onClick={() => setShowPatientInfoPanel(true)}
@@ -599,6 +610,63 @@ export default function App() {
           )}
         </button>
       </div>
+
+      {/* WS disconnect / reconnect sticky banner */}
+      {wsState !== "connected" && wsState !== "connecting" && (
+        <div className={`sticky top-0 z-40 flex items-center justify-center gap-2 py-1 px-3 text-xs ${
+          wsState === "reconnecting"
+            ? "bg-amber-950/80 border-b border-amber-700/40 text-amber-300"
+            : "bg-red-950/80 border-b border-red-700/40 text-red-300"
+        } backdrop-blur-sm`}>
+          <WifiOff className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {wsState === "reconnecting"
+            ? `Reconnecting${wsReconnectCount > 0 ? ` (${wsReconnectCount})` : ""}… changes will not sync`
+            : "WebSocket offline — changes will not sync"}
+        </div>
+      )}
+
+      {/* Keyboard shortcuts help overlay */}
+      {showShortcutsHelp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowShortcutsHelp(false)}
+        >
+          <div
+            className="theme-panel rounded-xl p-5 shadow-2xl w-72"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Keyboard className="h-4 w-4 text-subtle" aria-hidden />
+                <h3 className="font-semibold text-default text-sm">Keyboard Shortcuts</h3>
+              </div>
+              <button
+                onClick={() => setShowShortcutsHelp(false)}
+                className="text-subtle hover:text-default transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 text-sm">
+              {[
+                ["S", "Start session"],
+                ["P", "Pause session"],
+                ["X", "Stop session"],
+                ["I", "Patient info"],
+                ["C", "Live chat"],
+                ["?", "Toggle this help"],
+                ["Esc", "Close panels"],
+              ].map(([key, desc]) => (
+                <React.Fragment key={key}>
+                  <kbd className="badge-btn font-mono text-xs text-center min-w-[2rem] justify-center">{key}</kbd>
+                  <dd className="text-subtle self-center m-0">{desc}</dd>
+                </React.Fragment>
+              ))}
+            </dl>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 w-full px-4 py-4 sm:py-6 lg:py-2 lg:overflow-hidden">
         {toasts.length > 0 && (
@@ -832,16 +900,27 @@ export default function App() {
             {currentTab === "Live" && (
               <>
                 <div className="theme-panel p-2 sm:p-3 border-default border">
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className={`px-2 py-1 rounded-full border ${sessionStatus === "running" ? "text-emerald-300 border-emerald-500/40" : "text-amber-300 border-amber-500/40"}`}>
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs">
+                    {/* Session status badge */}
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border font-medium ${sessionStatus === "running" ? "text-emerald-400 border-emerald-500/50" : "text-amber-300 border-amber-500/40"}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${sessionStatus === "running" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} aria-hidden />
                       {sessionStatus.toUpperCase()}
                     </span>
-                    <span className="text-subtle">Sync:</span>
-                    <span className={syncClass}>{syncLabel}</span>
-                    <span className="text-subtle">Participants:</span>
-                    <span className="text-default">{presenceCount}</span>
-                    <span className="text-subtle">Layout:</span>
-                    <span className="text-default">v{layoutVersion} ({layoutMode})</span>
+                    {/* Sync */}
+                    <span className={`inline-flex items-center gap-1 ${syncClass}`}>
+                      {wsState === "connected" ? <Wifi className="h-3 w-3" aria-hidden /> : <WifiOff className="h-3 w-3" aria-hidden />}
+                      {syncLabel}
+                    </span>
+                    {/* Participants */}
+                    <span className="inline-flex items-center gap-1 text-subtle">
+                      <Users className="h-3 w-3" aria-hidden />
+                      <span className="text-default">{presenceCount}</span>
+                    </span>
+                    {/* Layout */}
+                    <span className="inline-flex items-center gap-1 text-subtle">
+                      <LayoutDashboard className="h-3 w-3" aria-hidden />
+                      <span className="text-default">v{layoutVersion} · {layoutMode}</span>
+                    </span>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <select
@@ -865,9 +944,19 @@ export default function App() {
                     </button>
                     {canEditLayout && (
                       <>
-                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("quad")}>Quad</button>
-                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("focus")}>Focus</button>
-                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("teaching")}>Teaching</button>
+                        {[
+                          { id: "quad", label: "Quad" },
+                          { id: "focus", label: "Focus" },
+                          { id: "teaching", label: "Teaching" },
+                        ].map(({ id, label }) => (
+                          <button
+                            key={id}
+                            className={`badge-btn text-xs ${activePreset === id ? "ring-1 ring-teal-400 text-teal-400" : ""}`}
+                            onClick={() => applyLayoutPreset(id)}
+                          >
+                            {label}
+                          </button>
+                        ))}
                         <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("clear")}>Reset</button>
                         <button className="badge-btn text-xs" onClick={handleUndoLayout} disabled={!canUndoLayout}>Undo</button>
                         {["2x2", "3x1", "1x3", "1x1"].map((mode) => (
