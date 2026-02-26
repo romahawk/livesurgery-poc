@@ -17,6 +17,20 @@ import {
   publishLayout,
   startSession,
 } from "./api/sessions";
+import { isFirebaseConfigured } from "./lib/firebase";
+import {
+  fbCreateSession,
+  fbEndSession,
+  fbGetLayout,
+  fbJoinSession,
+  fbListSessions,
+  fbPublishLayout,
+  fbStartSession,
+  fbPauseSession,
+  fbSubscribeLayout,
+  fbSubscribeParticipants,
+  getLocalUserId,
+} from "./api/firebaseService";
 
 import {
   DndContext,
@@ -144,7 +158,9 @@ export default function App() {
     setSessionsLoading(true);
     setSessionsError("");
     try {
-      const data = await listSessions(roleForRequest);
+      const data = isFirebaseConfigured
+        ? await fbListSessions()
+        : await listSessions(roleForRequest);
       setSessions(data.items || []);
     } catch (err) {
       setSessionsError(err instanceof Error ? err.message : "Failed to load sessions");
@@ -199,6 +215,71 @@ export default function App() {
   }, [sessions, selectedSessionId, activeSessionId]);
 
   useEffect(() => {
+    // ── Firebase realtime path ──────────────────────────────────────────────
+    if (isFirebaseConfigured) {
+      if (!activeSessionId) {
+        setWsState("offline");
+        setPresenceCount(0);
+        return;
+      }
+
+      setWsState("connecting");
+      const uid = getLocalUserId(role);
+      let unsubLayout = null;
+      let unsubParticipants = null;
+      let disposed = false;
+
+      (async () => {
+        try {
+          // Register presence
+          await fbJoinSession(activeSessionId, uid, role);
+          if (disposed) return;
+
+          // Load initial layout snapshot
+          const initialLayout = await fbGetLayout(activeSessionId);
+          if (disposed) return;
+          applyRemoteLayout(initialLayout.version, initialLayout.layout);
+
+          // Subscribe to live layout updates
+          unsubLayout = fbSubscribeLayout(activeSessionId, (data) => {
+            if (disposed) return;
+            const nextRemote = { version: data.version || 0, layout: data.layout || { panels: [] } };
+            if (role === "viewer" && !followPresenterRef.current) {
+              setQueuedPresenterLayout(nextRemote);
+              return;
+            }
+            applyRemoteLayout(nextRemote.version, nextRemote.layout);
+            setQueuedPresenterLayout(null);
+            setLayoutSyncError("");
+          });
+
+          // Subscribe to participant count
+          unsubParticipants = fbSubscribeParticipants(activeSessionId, (count) => {
+            if (!disposed) setPresenceCount(count);
+          });
+
+          if (!disposed) {
+            setWsConnected(true);
+            setWsState("connected");
+          }
+        } catch (err) {
+          if (!disposed) {
+            setWsState("disconnected");
+            setLayoutSyncError(err instanceof Error ? err.message : "Firebase sync unavailable.");
+            pushToast("error", "Firebase sync unavailable");
+          }
+        }
+      })();
+
+      return () => {
+        disposed = true;
+        if (unsubLayout) unsubLayout();
+        if (unsubParticipants) unsubParticipants();
+        setWsConnected(false);
+      };
+    }
+
+    // ── Original WebSocket path (backend fallback) ──────────────────────────
     let disposed = false;
 
     const scheduleReconnect = () => {
@@ -306,13 +387,15 @@ export default function App() {
     if (!activeSessionId || role === "viewer") return;
     const baseVersion = layoutVersionRef.current;
     try {
-      const response = await publishLayout(role, activeSessionId, baseVersion, gridToLayout(nextGrid));
+      const response = isFirebaseConfigured
+        ? await fbPublishLayout(activeSessionId, baseVersion, gridToLayout(nextGrid))
+        : await publishLayout(role, activeSessionId, baseVersion, gridToLayout(nextGrid));
       const nextVersion = response?.version ?? baseVersion;
       layoutVersionRef.current = nextVersion;
       setLayoutVersion(nextVersion);
       setLayoutSyncError("");
     } catch (err) {
-      if ((err?.status === 409 || err?.code === "LAYOUT_VERSION_CONFLICT") && activeSessionId) {
+      if (!isFirebaseConfigured && (err?.status === 409 || err?.code === "LAYOUT_VERSION_CONFLICT") && activeSessionId) {
         try {
           const latest = await getLayout(role, activeSessionId);
           applyRemoteLayout(latest.version, latest.layout);
@@ -451,12 +534,18 @@ export default function App() {
     try {
       let sessionId = activeSessionId || selectedSessionId;
       if (!sessionId) {
-        const created = await createSession(role, `Live Session ${new Date().toISOString()}`);
+        const created = isFirebaseConfigured
+          ? await fbCreateSession(`Live Session ${new Date().toLocaleString()}`)
+          : await createSession(role, `Live Session ${new Date().toISOString()}`);
         sessionId = created.id;
         setSelectedSessionId(sessionId);
         setActiveSessionId(sessionId);
       }
-      await startSession(role, sessionId);
+      if (isFirebaseConfigured) {
+        await fbStartSession(sessionId);
+      } else {
+        await startSession(role, sessionId);
+      }
       setSessionStatus("running");
       await refreshSessions(role);
       pushToast("success", "Session started");
@@ -482,7 +571,9 @@ export default function App() {
   const handleCreateSessionDraft = async () => {
     if (!canControlSession) return;
     try {
-      const created = await createSession(role, `Live Session ${new Date().toISOString()}`);
+      const created = isFirebaseConfigured
+        ? await fbCreateSession(`Live Session ${new Date().toLocaleString()}`)
+        : await createSession(role, `Live Session ${new Date().toISOString()}`);
       await refreshSessions(role);
       setSelectedSessionId(created.id);
       setActiveSessionId(created.id);
@@ -493,12 +584,23 @@ export default function App() {
     }
   };
 
-  const handlePause = () => setSessionStatus("paused");
+  const handlePause = async () => {
+    setSessionStatus("paused");
+    if (isFirebaseConfigured && activeSessionId) {
+      try { await fbPauseSession(activeSessionId); } catch { /* non-critical */ }
+    }
+  };
 
   const handleStop = async () => {
     if (!canControlSession) return;
     try {
-      if (activeSessionId) await endSession(role, activeSessionId);
+      if (activeSessionId) {
+        if (isFirebaseConfigured) {
+          await fbEndSession(activeSessionId);
+        } else {
+          await endSession(role, activeSessionId);
+        }
+      }
       setSessionStatus("stopped");
       await refreshSessions(role);
       pushToast("success", "Session stopped");
