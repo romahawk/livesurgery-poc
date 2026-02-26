@@ -58,6 +58,15 @@ function layoutToGrid(layout) {
   return [1, 2, 3, 4].map((index) => panelMap.get(`p${index}`) ?? null);
 }
 
+function normalizeSessionStatus(rawStatus) {
+  const normalized = String(rawStatus || "").trim().toUpperCase();
+  if (normalized === "LIVE" || normalized === "ACTIVE" || normalized === "RUNNING") return "running";
+  if (normalized === "PAUSED") return "paused";
+  if (normalized === "ENDED" || normalized === "STOPPED" || normalized === "COMPLETED") return "stopped";
+  if (normalized === "DRAFT" || normalized === "IDLE" || normalized === "CREATED" || normalized === "") return "idle";
+  return normalized.toLowerCase();
+}
+
 export default function App() {
   const [role, setRole] = useState("surgeon");
   const [currentTab, setCurrentTab] = useState("Live");
@@ -202,14 +211,14 @@ export default function App() {
 
     const hasSelected = sessions.some((s) => s.id === selectedSessionId);
     if (!hasSelected) {
-      const preferred = sessions.find((s) => s.status === "LIVE") || sessions[0];
+      const preferred = sessions.find((s) => normalizeSessionStatus(s.status) === "running") || sessions[0];
       setSelectedSessionId(preferred.id);
     }
 
     if (activeSessionId) {
       const active = sessions.find((s) => s.id === activeSessionId);
       if (active) {
-        setSessionStatus(active.status === "LIVE" ? "running" : active.status.toLowerCase());
+        setSessionStatus(normalizeSessionStatus(active.status));
       }
     }
   }, [sessions, selectedSessionId, activeSessionId]);
@@ -566,7 +575,7 @@ export default function App() {
     setActiveSessionId(selectedSessionId);
     setWsReconnectCount(0);
     setWsReconnectTick((tick) => tick + 1);
-    setSessionStatus(selected?.status === "LIVE" ? "running" : "idle");
+    setSessionStatus(normalizeSessionStatus(selected?.status));
     pushToast("success", "Joined session");
   };
 

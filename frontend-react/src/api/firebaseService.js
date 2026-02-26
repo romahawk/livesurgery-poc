@@ -21,7 +21,7 @@ import {
   query,
   orderBy,
 } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { db, ensureFirebaseAuth } from "../lib/firebase";
 
 // ─── Stable user ID (persisted to localStorage per-role) ──────────────────────
 export function getLocalUserId(role) {
@@ -37,6 +37,7 @@ export function getLocalUserId(role) {
 // ─── Sessions ─────────────────────────────────────────────────────────────────
 
 export async function fbListSessions() {
+  await ensureFirebaseAuth();
   const snap = await getDocs(
     query(collection(db, "sessions"), orderBy("createdAt", "desc"))
   );
@@ -50,6 +51,7 @@ export async function fbListSessions() {
 }
 
 export async function fbCreateSession(title) {
+  await ensureFirebaseAuth();
   const ref = await addDoc(collection(db, "sessions"), {
     title,
     status: "DRAFT",
@@ -67,6 +69,7 @@ export async function fbCreateSession(title) {
 }
 
 export async function fbStartSession(sessionId) {
+  await ensureFirebaseAuth();
   await updateDoc(doc(db, "sessions", sessionId), {
     status: "ACTIVE",
     startedAt: serverTimestamp(),
@@ -74,12 +77,14 @@ export async function fbStartSession(sessionId) {
 }
 
 export async function fbPauseSession(sessionId) {
+  await ensureFirebaseAuth();
   await updateDoc(doc(db, "sessions", sessionId), {
     status: "PAUSED",
   });
 }
 
 export async function fbEndSession(sessionId) {
+  await ensureFirebaseAuth();
   await updateDoc(doc(db, "sessions", sessionId), {
     status: "ENDED",
     endedAt: serverTimestamp(),
@@ -89,6 +94,7 @@ export async function fbEndSession(sessionId) {
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 export async function fbGetLayout(sessionId) {
+  await ensureFirebaseAuth();
   const snap = await getDoc(
     doc(db, "sessions", sessionId, "meta", "layout")
   );
@@ -101,6 +107,7 @@ export async function fbGetLayout(sessionId) {
  * no version-conflict concept — last writer wins, which is fine for a PoC.
  */
 export async function fbPublishLayout(sessionId, baseVersion, layout) {
+  await ensureFirebaseAuth();
   const newVersion = baseVersion + 1;
   await setDoc(doc(db, "sessions", sessionId, "meta", "layout"), {
     version: newVersion,
@@ -144,6 +151,7 @@ export function fbSubscribeParticipants(sessionId, callback) {
  * Register the current user as a participant.
  */
 export async function fbJoinSession(sessionId, userId, role) {
+  await ensureFirebaseAuth();
   await setDoc(
     doc(db, "sessions", sessionId, "participants", userId),
     { role, joinedAt: serverTimestamp(), lastSeenAt: serverTimestamp() },

@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+import { getAuth, signInAnonymously } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -24,10 +25,30 @@ console.log("[firebase] apiKey present:", Boolean(firebaseConfig.apiKey));
 console.log("[firebase] projectId:", firebaseConfig.projectId);
 
 let _db = null;
+let _auth = null;
+let _authInitPromise = null;
 
 if (isFirebaseConfigured) {
   const app = initializeApp(firebaseConfig);
   _db = getFirestore(app);
+  _auth = getAuth(app);
 }
 
 export const db = _db;
+export const auth = _auth;
+
+export async function ensureFirebaseAuth() {
+  if (!isFirebaseConfigured || !auth) return null;
+  if (auth.currentUser) return auth.currentUser;
+
+  if (!_authInitPromise) {
+    _authInitPromise = signInAnonymously(auth)
+      .then((cred) => cred.user)
+      .catch((err) => {
+        _authInitPromise = null;
+        throw err;
+      });
+  }
+
+  return _authInitPromise;
+}
