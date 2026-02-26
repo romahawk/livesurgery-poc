@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import DisplayGrid from "./components/DisplayGrid";
@@ -790,10 +790,10 @@ export default function App() {
                 ["?", "Toggle this help"],
                 ["Esc", "Close panels"],
               ].map(([key, desc]) => (
-                <React.Fragment key={key}>
+                <Fragment key={key}>
                   <kbd className="badge-btn font-mono text-xs text-center min-w-[2rem] justify-center">{key}</kbd>
                   <dd className="text-subtle self-center m-0">{desc}</dd>
-                </React.Fragment>
+                </Fragment>
               ))}
             </dl>
           </div>

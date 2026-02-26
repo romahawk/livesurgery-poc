@@ -45,11 +45,21 @@ const SOURCE_ICON = {
   "Monitor Capture": Monitor,
 };
 
+// Coerce Firestore Timestamp, Date, number, or ISO string → ISO string.
+const toISO = (val) => {
+  if (!val) return null;
+  if (typeof val === "string") return val;
+  if (typeof val.toDate === "function") return val.toDate().toISOString(); // Firestore Timestamp
+  if (val instanceof Date) return val.toISOString();
+  if (typeof val === "number") return new Date(val).toISOString();
+  return null;
+};
+
 const normalizeSession = (raw) => ({
   id: raw.id,
   surgeon: raw.surgeon || raw.createdBy || "N/A",
   procedure: raw.procedure || raw.title || "Untitled Session",
-  date: raw.date || raw.updatedAt || raw.createdAt || new Date().toISOString(),
+  date: toISO(raw.date) ?? toISO(raw.updatedAt) ?? toISO(raw.createdAt) ?? new Date().toISOString(),
   durationSec: Number.isFinite(raw.durationSec) ? raw.durationSec : 0,
   sizeMB: Number.isFinite(raw.sizeMB) ? raw.sizeMB : 0,
   sources: Array.isArray(raw.sources) ? raw.sources : [],
