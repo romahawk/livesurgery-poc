@@ -964,7 +964,7 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="lg:col-span-1 theme-panel p-2 sm:p-2.5 shadow flex flex-col justify-center">
+                  <div className="lg:col-span-1 flex flex-col justify-center">
                     <SessionControls
                       onStart={handleStart}
                       onPause={handlePause}
@@ -1122,7 +1122,7 @@ export default function App() {
                 )}
 
                 <div className="flex-1 theme-panel p-3 sm:p-4 shadow relative flex flex-col min-h-0">
-                  <div className="theme-panel p-3 sm:p-4 mb-3">
+                  <div className="mb-3">
                     <SessionControls
                       onStart={handleStart}
                       onPause={handlePause}

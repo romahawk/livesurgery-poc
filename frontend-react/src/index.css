@@ -307,6 +307,23 @@ html, body, #root {
   }
   .badge-btn:hover { opacity: .95; }
 
+  /* -------- Controls bar (wraps timer + session buttons) -------- */
+  .controls-bar {
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    transition: background 0.4s ease, border-color 0.4s ease;
+  }
+  .controls-bar[data-status="running"] {
+    background: color-mix(in oklch, #16a34a 6%, var(--panel));
+    border-color: color-mix(in oklch, #16a34a 35%, var(--border));
+  }
+  .controls-bar[data-status="paused"] {
+    background: color-mix(in oklch, #f59e0b 6%, var(--panel));
+    border-color: color-mix(in oklch, #f59e0b 35%, var(--border));
+  }
+
   /* -------- Reusable session buttons (softer colors) -------- */
   .btn {
     display: inline-flex;
@@ -342,6 +359,43 @@ html, body, #root {
     border-color: var(--btn-stop-border);
   }
   .btn-stop:hover { background: var(--btn-stop-bg-hover); }
+
+  /* Emphasised variant — the button you should press right now */
+  .btn-start.btn-active {
+    background: color-mix(in oklch, #16a34a 40%, var(--panel));
+    border-color: color-mix(in oklch, #16a34a 70%, var(--border));
+    box-shadow: 0 0 0 1px color-mix(in oklch, #16a34a 25%, transparent), 0 2px 8px rgba(22,163,74,.2);
+  }
+  .btn-start.btn-active:hover {
+    background: color-mix(in oklch, #16a34a 50%, var(--panel));
+  }
+  .btn-pause.btn-active {
+    background: color-mix(in oklch, #f59e0b 40%, var(--panel));
+    border-color: color-mix(in oklch, #f59e0b 70%, var(--border));
+    box-shadow: 0 0 0 1px color-mix(in oklch, #f59e0b 25%, transparent), 0 2px 8px rgba(245,158,11,.2);
+  }
+  .btn-pause.btn-active:hover {
+    background: color-mix(in oklch, #f59e0b 50%, var(--panel));
+  }
+
+  /* Keyboard shortcut badge inside buttons */
+  .btn-kbd {
+    display: inline-block;
+    font-family: ui-monospace, monospace;
+    font-size: 0.6em;
+    line-height: 1.5;
+    padding: 0 0.3em;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.18);
+    opacity: 0.65;
+    letter-spacing: 0;
+    user-select: none;
+  }
+  html.light .btn-kbd {
+    background: rgba(0,0,0,0.06);
+    border-color: rgba(0,0,0,0.12);
+  }
 }
 
 /* Make primary .btn controls smaller on mobile (Start / Pause / Stop) */
@@ -353,6 +407,10 @@ html, body, #root {
   .btn svg {
     width: 14px;
     height: 14px;
+  }
+  /* Hide kbd hints on very small screens to save space */
+  .btn-kbd {
+    display: none;
   }
 }
 

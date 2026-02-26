@@ -63,70 +63,95 @@ export default function SessionControls({
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
+  const startLabel = status === "paused" ? "Resume" : "Start";
+
   return (
-    <div className="p-2.5 theme-panel mb-0">
+    <div className="controls-bar" data-status={status}>
       <div className="flex flex-wrap items-center justify-between gap-4">
+        {/* Timer / status */}
         <div className="text-xs sm:text-sm inline-flex items-center gap-2 text-default">
           {status === "running" ? (
             <span className="inline-flex items-center gap-1.5 text-rose-400">
               <Circle className="h-2.5 w-2.5 fill-rose-500 text-rose-500 animate-pulse" aria-hidden />
-              <span className="font-bold tracking-widest text-[10px] uppercase">REC</span>
+              <span className="font-bold tracking-widest text-[10px] uppercase">Live</span>
+            </span>
+          ) : status === "paused" ? (
+            <span className="inline-flex items-center gap-1.5 text-amber-400">
+              <Pause className="h-3 w-3 fill-amber-400" aria-hidden />
+              <span className="font-bold tracking-widest text-[10px] uppercase">Paused</span>
             </span>
           ) : (
-            <Clock4 className="h-4 w-4" aria-hidden />
+            <Clock4 className="h-4 w-4 text-subtle" aria-hidden />
           )}
-          <strong>Session Time:</strong>
-          <span className={status === "running" ? "tabular-nums text-emerald-400" : "tabular-nums"}>
+          <span className="text-subtle font-medium">Session</span>
+          <span
+            className={
+              status === "running"
+                ? "tabular-nums font-mono font-semibold text-emerald-400"
+                : status === "paused"
+                ? "tabular-nums font-mono font-semibold text-amber-300"
+                : "tabular-nums font-mono text-subtle"
+            }
+          >
             {formatTime(timer)}
           </span>
         </div>
 
         {!hideActions && (
-          <div className="flex flex-wrap gap-2 justify-end">
-            <button
-              className="btn btn-start"
-              onClick={() => {
-                if (!canControl) return;
-                onStart();
-                // Record start timestamp only when session begins
-                if (!localStorage.getItem("ls_session_start")) {
-                  localStorage.setItem("ls_session_start", Date.now().toString());
-                  localStorage.setItem("ls_session_offset", "0");
-                }
-              }}
-              disabled={!canControl || status === "running"}
-              title={!canControl ? readOnlyReason : "Start session"}
-            >
-              <Play className="h-4 w-4" />
-              Start
-            </button>
+          <>
+            {/* Divider */}
+            <div className="hidden sm:block w-px self-stretch bg-border opacity-60" aria-hidden />
 
-            <button
-              className="btn btn-pause"
-              onClick={() => {
-                if (!canControl) return;
-                onPause();
-                // Save current time as offset for later resume
-                localStorage.setItem("ls_session_offset", timer.toString());
-                localStorage.removeItem("ls_session_start");
-              }}
-              disabled={!canControl || status !== "running"}
-              title={!canControl ? readOnlyReason : "Pause session"}
-            >
-              <Pause className="h-4 w-4" />
-              Pause
-            </button>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button
+                className={`btn btn-start${status !== "running" && canControl ? " btn-active" : ""}`}
+                onClick={() => {
+                  if (!canControl) return;
+                  onStart();
+                  if (!localStorage.getItem("ls_session_start")) {
+                    localStorage.setItem("ls_session_start", Date.now().toString());
+                    localStorage.setItem("ls_session_offset", "0");
+                  }
+                }}
+                disabled={!canControl || status === "running"}
+                title={!canControl ? readOnlyReason : `${startLabel} session (S)`}
+                aria-label={startLabel}
+              >
+                <Play className="h-4 w-4" />
+                {startLabel}
+                <kbd className="btn-kbd">S</kbd>
+              </button>
 
-            <button
-              className="btn btn-stop"
-              onClick={() => canControl && handleStop()}
-              disabled={!canControl}
-              title={!canControl ? readOnlyReason : "Stop session"}
-            >
-              <Square className="h-4 w-4" />
-              Stop
-            </button>
-          </div>
+              <button
+                className={`btn btn-pause${status === "running" && canControl ? " btn-active" : ""}`}
+                onClick={() => {
+                  if (!canControl) return;
+                  onPause();
+                  localStorage.setItem("ls_session_offset", timer.toString());
+                  localStorage.removeItem("ls_session_start");
+                }}
+                disabled={!canControl || status !== "running"}
+                title={!canControl ? readOnlyReason : "Pause session (P)"}
+                aria-label="Pause"
+              >
+                <Pause className="h-4 w-4" />
+                Pause
+                <kbd className="btn-kbd">P</kbd>
+              </button>
+
+              <button
+                className="btn btn-stop"
+                onClick={() => canControl && handleStop()}
+                disabled={!canControl}
+                title={!canControl ? readOnlyReason : "End session (X)"}
+                aria-label="Stop"
+              >
+                <Square className="h-4 w-4" />
+                Stop
+                <kbd className="btn-kbd">X</kbd>
+              </button>
+            </div>
+          </>
         )}
         {hideActions && !canControl && (
           <div className="text-xs text-subtle">{readOnlyReason}</div>
