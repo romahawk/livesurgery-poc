@@ -646,6 +646,17 @@ export default function App() {
     pushToast("success", "Synced latest presenter layout");
   };
 
+  // Stable refs so the keyboard listener (mounted once) always calls the
+  // latest version of these async handlers without re-registering on every render.
+  const handleStartRef = useRef(handleStart);
+  const handlePauseRef = useRef(handlePause);
+  const handleStopRef  = useRef(handleStop);
+  useEffect(() => {
+    handleStartRef.current = handleStart;
+    handlePauseRef.current = handlePause;
+    handleStopRef.current  = handleStop;
+  });
+
   useEffect(() => {
     const isTyping = () => {
       const el = document.activeElement;
@@ -659,13 +670,21 @@ export default function App() {
       );
     };
 
+    const HANDLED_KEYS = new Set(["escape", "s", "p", "x", "i", "c", "?"]);
+
     const onKey = (e) => {
-      if (e.key === "Escape") { setShowShortcutsHelp(false); return; }
-      if (isTyping()) return;
       const key = e.key?.toLowerCase();
-      if (key === "s") handleStart();
-      else if (key === "p") handlePause();
-      else if (key === "x") handleStop();
+      if (!HANDLED_KEYS.has(key)) return;
+
+      if (key === "escape") { setShowShortcutsHelp(false); return; }
+      if (isTyping()) return;
+
+      // Prevent browser defaults (find-in-page, save-as, etc.)
+      e.preventDefault();
+
+      if (key === "s") handleStartRef.current();
+      else if (key === "p") handlePauseRef.current();
+      else if (key === "x") handleStopRef.current();
       else if (key === "i") setShowPatientInfoPanel(true);
       else if (key === "c") {
         setShowChatPanel(true);
@@ -675,7 +694,7 @@ export default function App() {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  });
+  }, []); // mount once — handlers stay current via refs above
 
   return (
     <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-surface text-default flex flex-col">
