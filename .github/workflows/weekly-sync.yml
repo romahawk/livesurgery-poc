@@ -1,0 +1,49 @@
+name: Weekly Roadmap Sync
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'   # Every Monday at 09:00 UTC
+  workflow_dispatch:        # Allow manual trigger for testing
+
+jobs:
+  open-sync-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Get date
+        id: date
+        run: echo "today=$(date -u +'%Y-%m-%d')" >> "$GITHUB_OUTPUT"
+
+      - name: Open weekly sync issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = '${{ steps.date.outputs.today }}';
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Weekly Roadmap Sync — ${today}`,
+              body: [
+                '## Weekly Roadmap Sync',
+                '',
+                `**Date:** ${today}`,
+                '',
+                '### Review checklist',
+                '',
+                '- [ ] Review [ROADMAP.md](docs/ROADMAP.md) — are this week\'s outcomes on track?',
+                '- [ ] Review [SPRINT_BACKLOG.md](docs/SPRINT_BACKLOG.md) — move completed issues to Done, add new ones',
+                '- [ ] Update [CHANGELOG.md](CHANGELOG.md) `[Unreleased]` with any unlogged changes',
+                '- [ ] Update [NEXT_SESSION_START.md](docs/NEXT_SESSION_START.md) with current state',
+                '- [ ] Are any blockers or scope changes needed? Update roadmap if so.',
+                '',
+                '### Notes',
+                '',
+                '<!-- What shipped this week? What\'s blocked? Any scope changes? -->',
+                '',
+                '---',
+                '_Opened automatically by [weekly-sync.yml](.github/workflows/weekly-sync.yml)_',
+              ].join('\n'),
+              labels: ['chore', 'weekly-sync'],
+            });

@@ -9,6 +9,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `CLAUDE.md` — AI session rules: role boundary, anti-patterns table, pre-commit gates
+- `.github/workflows/weekly-sync.yml` — Monday 09:00 UTC cron; opens "Weekly Roadmap Sync" GitHub issue
+- `docs/SPRINT_BACKLOG.md` — Sprint 8 backlog with acceptance-criteria checkboxes
+- `docs/DAILY_CHECKLIST.md` — pre/post-session and weekly checklists
+- `docs/NEXT_SESSION_START.md` — "Start Here" guide updated to current state
+- `docs/WORKFLOW_AUTOMATION_PLAYBOOK.md` — documents all GitHub Actions workflows
+- `frontend-react/vercel.json` — SPA rewrite rule (prevents 404 on direct route access)
 - `POST /auth/token` endpoint — dev-mode token minting (userId + role → signed HMAC token)
 - Bearer token validation in `get_current_principal()` — primary auth path; dev headers kept as fallback
 - `mint_api_token()` and `_verify_api_token()` in `backend/app/core/auth.py`
@@ -18,9 +25,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `docs/AUTH_MIGRATION.md` — step-by-step OIDC migration guide (Auth0 + Supabase Auth options)
 - `docs/SPRINTS/sprint-07.md`
 
+### Changed
+- `docs/roadmap.md` → `docs/ROADMAP.md`, `docs/architecture.md` → `docs/ARCHITECTURE.md` (uppercase)
+- `.github/PULL_REQUEST_TEMPLATE.md` → `.github/pull_request_template.md` (lowercase, GitHub standard)
+- `OnboardingModal.jsx` — full rewrite with accurate workflow, tip chips, keyboard navigation, clickable progress dots
+
 ---
 
-## [0.5.0] — Sprint 6 — Stabilization + Hardening
+## [0.5.0] — 2026-02-25 — Sprint 6 — Stabilization + Hardening
 
 ### Added
 - `GET /healthz` endpoint — liveness + DB readiness check (200 ok / 503 disconnected)
@@ -31,19 +43,19 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `docs/SPRINTS/sprint-05.md` — Sprint 5 backlog (AI Production OS adoption)
 - `.env.example` — documents required/optional env vars for backend
 - `CHANGELOG.md` — this file
-- Updated `docs/roadmap.md` — outcome-based weekly roadmap with DoD
-- Enhanced `.github/PULL_REQUEST_TEMPLATE.md` — added demo artifact + scope fields
+- Updated `docs/ROADMAP.md` — outcome-based weekly roadmap with DoD
+- Enhanced `.github/pull_request_template.md` — added demo artifact + scope fields
 - Added `.github/ISSUE_TEMPLATE/chore.yml` — template for maintenance/housekeeping issues
 
 ---
 
-## [0.4.0] — Sprint 4 — Docs + Backend Integration (2025)
+## [0.4.0] — 2025-11-20 — Sprint 4 — Docs + Backend Integration
 
 ### Added
 - Full `README.md` rewrite with architecture overview and deploy links
-- `docs/architecture.md` — C4-style diagrams (system, container, component, sequence)
-- `docs/prd.md` — PRD with MoSCoW requirements and success metrics
-- `docs/roadmap.md` — PoC → MVP → Production roadmap
+- `docs/ARCHITECTURE.md` — C4-style diagrams (system, container, component, sequence)
+- `docs/PRD.md` — PRD with MoSCoW requirements and success metrics
+- `docs/ROADMAP.md` — PoC → MVP → Production roadmap
 - `docs/agile_case_study.md` — Agile process documentation
 - `docs/SPRINTS/sprint-01.md` through `sprint-04.md`
 - `CONTRIBUTING.md` — local setup, quality checks, commit style
@@ -60,7 +72,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [0.3.0] — Sprint 3 — Collaboration + Realtime (2025)
+## [0.3.0] — 2025-09-25 — Sprint 3 — Collaboration + Realtime
 
 ### Added
 - `backend/app/services/realtime_hub.py` — WebSocket hub with HMAC token auth
@@ -80,7 +92,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [0.2.0] — Sprint 2 — OR Workspace UI (2025)
+## [0.2.0] — 2025-08-14 — Sprint 2 — OR Workspace UI
 
 ### Added
 - `frontend-react/src/components/Navbar.jsx` — tabs, role selector, theme toggle
@@ -101,7 +113,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [0.1.0] — Sprint 1 — Project Skeleton (2025)
+## [0.1.0] — 2025-06-04 — Sprint 1 — Project Skeleton
 
 ### Added
 - `backend/` — FastAPI project with `app/core/`, `app/routes/`, `app/services/`, `app/models/`
