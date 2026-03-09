@@ -93,6 +93,33 @@ Rules:
 
 ---
 
+## Commit hygiene (mandatory)
+
+**One logical change per commit — no exceptions.**
+
+| Rule | Detail |
+|---|---|
+| One concern per commit | A bug fix and a feature are always two separate commits |
+| No "WIP" or "temp" commits | Every commit must be releasable on its own |
+| No merge commits on feature branches | Rebase onto `main` before opening a PR |
+| Squash fixups before pushing | `git rebase -i` to clean up before the PR is reviewed |
+| No commit message padding | Do not use "minor", "various", "misc", or "update stuff" |
+| Body is optional but purposeful | If included, explain *why*, never repeat the subject line |
+| Max 3 files per commit where possible | Large changesets must be split by concern |
+| No commented-out code in commits | Delete dead code — version control is the history |
+
+**Before every `git commit`:**
+1. `git diff --staged` — read every line; nothing unintended should be staged.
+2. Ask: "Could this commit be split into two independent changes?" If yes — split it.
+3. Ask: "Does the subject line describe the change precisely in ≤ 72 chars?" If no — rewrite it.
+
+**PR merge strategy:**
+- All PRs must use **squash-merge** on GitHub (one clean commit per PR on `main`).
+- The squash commit message must follow the same `<type>(<scope>): ...` format.
+- Delete the feature branch after merge.
+
+---
+
 ## Branch naming
 
 ```
