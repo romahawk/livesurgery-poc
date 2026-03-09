@@ -1,11 +1,56 @@
 # LiveSurgery
 
+<p align="center">
+  <img src="docs/screenshots/og-livesurgery.png" alt="LiveSurgery — real-time OR workspace" width="900" />
+</p>
+
 A **simulated Operating Room (OR) workspace** — a full-stack web application built as a
 **Proof of Concept** demonstrating real-time multi-user collaboration, role-based access control,
 and a multi-panel video workspace. Designed to evolve into an MVP with live WebRTC streaming.
 
 > **Disclaimer:** This project is **not for clinical use** and does not store patient data.
 > It is a portfolio/demonstration project.
+
+---
+
+## Screenshots
+
+### OR Workspace — 2×2 multi-panel view
+
+![OR workspace with 2×2 grid layout, source sidebar and session controls](docs/screenshots/workspace-2x2.png)
+
+> _Drag video sources (Endoscope · Microscope · PTZ Camera · Monitor) from the sidebar into any panel.
+> Each panel shows the source label, fit/fill toggle, and a remove control. Layout syncs to all participants in real time._
+
+### Source sidebar & drag-and-drop assignment
+
+![Source sidebar showing draggable video sources with live/offline status pills](docs/screenshots/sidebar-sources.png)
+
+> _Each source has a drag handle, status pill (live / in grid / offline / muted), and icon. Dragging a source onto a panel or swapping two panels triggers an optimistic WebSocket update with conflict resolution._
+
+### Session controls & presence
+
+![Session controls bar with play/pause/stop timer and role indicator](docs/screenshots/session-controls.png)
+
+> _Surgeon/Admin can start, pause, and stop sessions with a running timer. Observers see the same controls in read-only mode. Role is displayed inline. Keyboard shortcuts: `S` start · `P` pause · `X` stop._
+
+### Analytics dashboard
+
+![Analytics dashboard with sessions-per-day chart, source utilisation, QoS trend and layout distribution](docs/screenshots/analytics.png)
+
+> _7-day KPI dashboard: daily session count (line chart), source utilisation (bar), QoS latency trend (area), layout distribution (pie), and an error log table._
+
+### Archive
+
+![Archive view listing past sessions with duration and participant count](docs/screenshots/archive.png)
+
+> _Completed sessions with duration, participants, and layout mode. Designed as the entry point for recording playback once object storage is wired in._
+
+---
+
+> **To add real screenshots:** run the app locally (`./scripts/dev.sh`), open
+> [http://localhost:5173](http://localhost:5173), and save captures to `docs/screenshots/`
+> using the filenames above.
 
 ---
 
