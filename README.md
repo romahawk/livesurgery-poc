@@ -1,5 +1,9 @@
 # LiveSurgery
 
+<p align="center">
+  <img src="docs/screenshots/og-livesurgery.png" alt="LiveSurgery — real-time OR workspace" width="900" />
+</p>
+
 A **simulated Operating Room (OR) workspace** — a full-stack web application built as a
 **Proof of Concept** demonstrating real-time multi-user collaboration, role-based access control,
 and a multi-panel video workspace. Designed to evolve into an MVP with live WebRTC streaming.
@@ -18,32 +22,39 @@ in real time. Today it runs on simulated video; the architecture is ready for We
 
 ---
 
-## Live demo
+## Deploy
 
-**Frontend:** [https://livesurgery.vercel.app](https://livesurgery.vercel.app)
+**Platform:** Vercel (frontend) | Backend not yet deployed (local only)
 
-> The live demo connects to a local backend — layout sync and session persistence require
+**Live URL:** [https://livesurgery.vercel.app](https://livesurgery.vercel.app)
+
+> The live demo runs the frontend only — layout sync and session persistence require
 > running the backend locally (see setup below).
 
 ---
 
-## What exists today (PoC)
+## Current status
+
+**Stage:** PoC (Proof of Concept)
+**Scope:** Full-stack simulated OR workspace — deployed frontend, local backend, no real video or auth
+**Adoption:** Solo developer / portfolio project — not in clinical or production use
 
 | Capability | Status |
 |---|---|
-| Multi-panel OR workspace UI (2x2, 3x1, 1x3, 1x1 modes) | Done |
+| Multi-panel OR workspace UI (2×2, 3×1, 1×3, 1×1 modes) | Done |
 | Drag-and-drop source assignment across panels | Done |
 | Layout presets (Quad, Focus, Teaching) + undo history | Done |
-| Role-based access (Surgeon / Observer / Viewer) | Done |
+| Role-based access (Surgeon / Admin / Viewer) | Done |
 | Session CRUD (create, list, start, end) | Done |
 | WebSocket real-time layout sync + presence | Done |
 | Layout versioning + conflict resolution (optimistic concurrency) | Done |
 | Simulated video assets (HTML5) | Done |
 | Archive tab (mock data) | Done |
-| Analytics dashboard (mock data) | Done |
+| Analytics dashboard (mock data, last 7 days) | Done |
 | Dark / light theme | Done |
-| Onboarding modal + keyboard shortcuts | Done |
+| Onboarding modal + keyboard shortcuts (S / P / X / I / C / ?) | Done |
 | CI pipeline (lint, build, ruff, black, pytest) | Done |
+| AI Production OS compliance (CLAUDE.md, weekly-sync, guardrails) | Done |
 
 ## What comes next (MVP targets)
 
@@ -129,6 +140,38 @@ pytest tests -q
 
 ---
 
+## API quick reference
+
+With the backend running at `http://localhost:8000`:
+
+| Endpoint | Auth | Description |
+|---|---|---|
+| `GET /healthz` | none | Liveness + DB readiness |
+| `POST /auth/token` | none | Mint a dev API token |
+| `GET /v1/sessions` | Bearer | List sessions for current user |
+| `POST /v1/sessions` | Bearer (Surgeon/Admin) | Create a session |
+| `POST /v1/sessions/{id}/start` | Bearer (Surgeon/Admin) | Start a session |
+| `POST /v1/sessions/{id}/end` | Bearer (Surgeon/Admin) | End a session |
+| `POST /v1/sessions/{id}/participants:join` | Bearer | Join + get WS token |
+| `GET /v1/sessions/{id}/layout` | Bearer | Get current layout |
+| `POST /v1/sessions/{id}/layout` | Bearer (Surgeon/Admin) | Publish layout update |
+| `WS /ws/sessions/{id}?token=<ws-token>` | WS token | Realtime layout + presence |
+| `GET /docs` | none | Interactive OpenAPI UI |
+
+### Get a token (curl)
+
+```bash
+curl -s -X POST http://localhost:8000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "test-surgeon", "role": "SURGEON"}' | jq .
+```
+
+Valid roles: `SURGEON` | `OBSERVER` | `ADMIN`
+
+See [docs/AUTH_MIGRATION.md](docs/AUTH_MIGRATION.md) for the full token flow and OIDC migration path.
+
+---
+
 ## Project structure
 
 ```
@@ -150,13 +193,18 @@ pytest tests -q
 │   │   └── theme/         # ThemeProvider context
 │   └── public/videos/     # HTML5 video assets
 ├── docs/
-│   ├── prd.md
-│   ├── architecture.md
-│   ├── roadmap.md
+│   ├── PRD.md
+│   ├── ARCHITECTURE.md
+│   ├── ROADMAP.md
 │   ├── DECISIONS_LOG.md
-│   └── SPRINTS/           # sprint-01 through sprint-05
+│   ├── SPRINT_BACKLOG.md
+│   ├── DAILY_CHECKLIST.md
+│   ├── NEXT_SESSION_START.md
+│   ├── WORKFLOW_AUTOMATION_PLAYBOOK.md
+│   └── SPRINTS/           # sprint-01 through sprint-07
 ├── .github/
 │   ├── workflows/ci.yml
+│   ├── workflows/weekly-sync.yml
 │   └── ISSUE_TEMPLATE/
 ├── .env.example
 ├── CHANGELOG.md
@@ -169,10 +217,14 @@ pytest tests -q
 
 | Document | Description |
 |---|---|
-| [Architecture](docs/architecture.md) | C4 diagrams, data model, realtime design |
-| [PRD](docs/prd.md) | Requirements, user journeys, success metrics |
-| [Roadmap](docs/roadmap.md) | Weekly outcomes, milestones, freeze list |
+| [Architecture](docs/ARCHITECTURE.md) | C4 diagrams, data model, realtime design |
+| [PRD](docs/PRD.md) | Requirements, user journeys, success metrics |
+| [Roadmap](docs/ROADMAP.md) | Weekly outcomes, milestones, freeze list |
 | [Decisions Log](docs/DECISIONS_LOG.md) | ADR-style architectural decisions |
+| [Sprint Backlog](docs/SPRINT_BACKLOG.md) | Active sprint with acceptance criteria |
+| [Daily Checklist](docs/DAILY_CHECKLIST.md) | Pre/post-session quality checklist |
+| [Next Session Start](docs/NEXT_SESSION_START.md) | Current state + "Start Here" guide |
+| [Workflow Playbook](docs/WORKFLOW_AUTOMATION_PLAYBOOK.md) | GitHub Actions workflow docs |
 | [Changelog](CHANGELOG.md) | What changed and when |
 | [Contributing](CONTRIBUTING.md) | Local setup, PR process |
 
@@ -186,4 +238,4 @@ pytest tests -q
 | NEXT (MVP) | Real auth + WebRTC + deployed backend | Managed services, incremental |
 | FUTURE | Compliance + enterprise readiness | Audit trails, SSO, multi-tenant |
 
-See [docs/roadmap.md](docs/roadmap.md) for the detailed weekly delivery plan.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the detailed weekly delivery plan.

@@ -1,0 +1,169 @@
+name: Auto-fill PR title and description
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  autofill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate and apply PR title + description
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER:  ${{ github.event.pull_request.number }}
+          BASE_SHA:   ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA:   ${{ github.event.pull_request.head.sha }}
+          BASE_BRANCH: ${{ github.base_ref }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+          CURRENT_TITLE: ${{ github.event.pull_request.title }}
+          CURRENT_BODY:  ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+
+          # ── 1. Skip if the PR was already filled in manually ────────────────
+          # A title is "unfilled" when GitHub has auto-set it to the branch name.
+          # Normalise both sides to lower-case, replace slashes/hyphens with spaces.
+          NORM_TITLE=$(echo "$CURRENT_TITLE" | tr '[:upper:]' '[:lower:]' | tr '/_-' '   ' | tr -s ' ')
+          NORM_BRANCH=$(echo "$HEAD_BRANCH"  | tr '[:upper:]' '[:lower:]' | tr '/_-' '   ' | tr -s ' ')
+
+          TITLE_IS_BRANCH=false
+          [[ "$NORM_TITLE" == "$NORM_BRANCH" ]] && TITLE_IS_BRANCH=true
+
+          # Body is "unfilled" when the template HTML comments are still present.
+          BODY_IS_TEMPLATE=false
+          echo "$CURRENT_BODY" | grep -q '<!--' && BODY_IS_TEMPLATE=true
+
+          if [[ "$TITLE_IS_BRANCH" == "false" && "$BODY_IS_TEMPLATE" == "false" ]]; then
+            echo "PR already has a custom title and description — skipping."
+            exit 0
+          fi
+
+          # ── 2. Collect commits ───────────────────────────────────────────────
+          SUBJECTS=$(git log --format="%s" "$BASE_SHA".."$HEAD_SHA" 2>/dev/null || true)
+
+          if [[ -z "$SUBJECTS" ]]; then
+            echo "No commits found between base and head — skipping."
+            exit 0
+          fi
+
+          # ── 3. Derive PR title ───────────────────────────────────────────────
+          # Use the first feat commit, else first fix, else the very first commit.
+          FEAT_LINE=$(echo "$SUBJECTS" | grep -m1 "^feat"   || true)
+          FIX_LINE=$(echo  "$SUBJECTS" | grep -m1 "^fix"    || true)
+          FIRST_LINE=$(echo "$SUBJECTS" | tail -1)
+
+          if [[ -n "$FEAT_LINE" ]]; then
+            NEW_TITLE="$FEAT_LINE"
+          elif [[ -n "$FIX_LINE" ]]; then
+            NEW_TITLE="$FIX_LINE"
+          else
+            NEW_TITLE="$FIRST_LINE"
+          fi
+
+          # Truncate to 72 chars
+          NEW_TITLE="${NEW_TITLE:0:72}"
+
+          # ── 4. Group commits by conventional-commit type ─────────────────────
+          FEATS=$(echo   "$SUBJECTS" | grep "^feat"     || true)
+          FIXES=$(echo   "$SUBJECTS" | grep "^fix"      || true)
+          DOCS=$(echo    "$SUBJECTS" | grep "^docs"     || true)
+          CHORES=$(echo  "$SUBJECTS" | grep "^chore"    || true)
+          REFACTS=$(echo "$SUBJECTS" | grep "^refactor" || true)
+          TESTS=$(echo   "$SUBJECTS" | grep "^test"     || true)
+          OTHER=$(echo   "$SUBJECTS" | grep -v "^feat\|^fix\|^docs\|^chore\|^refactor\|^test" || true)
+
+          # ── 5. Build ## What list ────────────────────────────────────────────
+          WHAT_LIST=""
+          add_section() {
+            local label="$1"; local items="$2"
+            if [[ -n "$items" ]]; then
+              while IFS= read -r line; do
+                WHAT_LIST+="- $line"$'\n'
+              done <<< "$items"
+            fi
+          }
+          add_section "feat"     "$FEATS"
+          add_section "fix"      "$FIXES"
+          add_section "docs"     "$DOCS"
+          add_section "chore"    "$CHORES"
+          add_section "refactor" "$REFACTS"
+          add_section "test"     "$TESTS"
+          add_section "other"    "$OTHER"
+
+          # ── 6. Auto-check type-of-change boxes ──────────────────────────────
+          CB_FEAT="[ ]"; CB_FIX="[ ]"; CB_CHORE="[ ]"
+          CB_DOCS="[ ]"; CB_REFACT="[ ]"
+
+          [[ -n "$FEATS"   ]] && CB_FEAT="[x]"
+          [[ -n "$FIXES"   ]] && CB_FIX="[x]"
+          [[ -n "$CHORES"  ]] && CB_CHORE="[x]"
+          [[ -n "$DOCS"    ]] && CB_DOCS="[x]"
+          [[ -n "$REFACTS" ]] && CB_REFACT="[x]"
+
+          # ── 7. Compose the new body ──────────────────────────────────────────
+          NEW_BODY="## What
+
+$WHAT_LIST
+Closes #
+
+## Why
+
+<!-- Explain the motivation. What problem does this solve? -->
+
+## How
+
+<!-- Describe the approach. Key design decisions or trade-offs. -->
+
+## Type of change
+
+- $CB_FEAT feat — new feature
+- $CB_FIX fix — bug fix
+- $CB_CHORE chore — maintenance, config, dependency update
+- $CB_DOCS docs — documentation only
+- $CB_REFACT refactor — internal restructure, no behavior change
+
+## Scope check
+
+- [ ] Yes, this PR is tightly scoped to the issue
+- [ ] No — explain what extra changes are included and why:
+
+## Validation
+
+**Frontend** (run in \`frontend-react/\`):
+- [ ] \`npm run lint\` passes
+- [ ] \`npm run build\` passes
+- [ ] Vitest tests pass (if applicable)
+
+**Backend**:
+- [ ] \`ruff check backend/app backend/tests\` passes
+- [ ] \`black --check backend/app backend/tests\` passes
+- [ ] \`python3 -m pytest backend/tests -q\` passes
+
+## Demo artifact
+
+<!-- Screenshot, GIF, or Loom link. Required for feat/fix PRs. -->
+N/A for chore/docs — OR paste screenshot/link here:
+
+## Checklist
+
+- [ ] \`CHANGELOG.md\` [Unreleased] section updated
+- [ ] \`.env.example\` updated if new env vars added
+- [ ] Docs updated if public API or workflow changed
+- [ ] CI passes (all jobs green)"
+
+          # ── 8. Apply ─────────────────────────────────────────────────────────
+          gh pr edit "$PR_NUMBER" \
+            --title "$NEW_TITLE" \
+            --body  "$NEW_BODY"
+
+          echo "PR #$PR_NUMBER updated."
+          echo "Title: $NEW_TITLE"

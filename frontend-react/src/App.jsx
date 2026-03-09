@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import DisplayGrid from "./components/DisplayGrid";
@@ -17,6 +17,20 @@ import {
   publishLayout,
   startSession,
 } from "./api/sessions";
+import { isFirebaseConfigured } from "./lib/firebase";
+import {
+  fbCreateSession,
+  fbEndSession,
+  fbGetLayout,
+  fbJoinSession,
+  fbListSessions,
+  fbPublishLayout,
+  fbStartSession,
+  fbPauseSession,
+  fbSubscribeLayout,
+  fbSubscribeParticipants,
+  getLocalUserId,
+} from "./api/firebaseService";
 
 import {
   DndContext,
@@ -25,7 +39,7 @@ import {
   useSensors,
   closestCenter,
 } from "@dnd-kit/core";
-import { UserCircle, MessageCircle, CheckCircle2, AlertCircle } from "lucide-react";
+import { UserCircle, MessageCircle, CheckCircle2, AlertCircle, Users, Wifi, WifiOff, LayoutDashboard, X, Keyboard } from "lucide-react";
 
 const EMPTY_GRID = [null, null, null, null];
 const CATALOG_SOURCES = ["endoscope.mp4", "microscope.mp4", "ptz.mp4", "vital_signs.mp4"];
@@ -42,6 +56,15 @@ function gridToLayout(gridSources) {
 function layoutToGrid(layout) {
   const panelMap = new Map((layout?.panels || []).map((p) => [p.id, p.streamId ?? null]));
   return [1, 2, 3, 4].map((index) => panelMap.get(`p${index}`) ?? null);
+}
+
+function normalizeSessionStatus(rawStatus) {
+  const normalized = String(rawStatus || "").trim().toUpperCase();
+  if (normalized === "LIVE" || normalized === "ACTIVE" || normalized === "RUNNING") return "running";
+  if (normalized === "PAUSED") return "paused";
+  if (normalized === "ENDED" || normalized === "STOPPED" || normalized === "COMPLETED") return "stopped";
+  if (normalized === "DRAFT" || normalized === "IDLE" || normalized === "CREATED" || normalized === "") return "idle";
+  return normalized.toLowerCase();
 }
 
 export default function App() {
@@ -82,6 +105,8 @@ export default function App() {
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [canUndoLayout, setCanUndoLayout] = useState(false);
+  const [activePreset, setActivePreset] = useState(null);
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [followPresenter, setFollowPresenter] = useState(true);
   const [queuedPresenterLayout, setQueuedPresenterLayout] = useState(null);
 
@@ -92,6 +117,7 @@ export default function App() {
   const reconnectTimerRef = useRef(null);
   const layoutHistoryRef = useRef([]);
   const followPresenterRef = useRef(followPresenter);
+  const wsReconnectCountRef = useRef(wsReconnectCount);
   const canControlSession = role !== "viewer";
   const canEditLayout = role !== "viewer";
   const syncLabel =
@@ -117,6 +143,10 @@ export default function App() {
     layoutVersionRef.current = layoutVersion;
   }, [layoutVersion]);
 
+  useEffect(() => {
+    wsReconnectCountRef.current = wsReconnectCount;
+  }, [wsReconnectCount]);
+
   const applyRemoteLayout = (version, layout) => {
     layoutVersionRef.current = version;
     setLayoutVersion(version);
@@ -133,18 +163,20 @@ export default function App() {
     }, 2800);
   };
 
-  const refreshSessions = async (roleForRequest = role) => {
+  const refreshSessions = useCallback(async (roleForRequest = role) => {
     setSessionsLoading(true);
     setSessionsError("");
     try {
-      const data = await listSessions(roleForRequest);
+      const data = isFirebaseConfigured
+        ? await fbListSessions()
+        : await listSessions(roleForRequest);
       setSessions(data.items || []);
     } catch (err) {
       setSessionsError(err instanceof Error ? err.message : "Failed to load sessions");
     } finally {
       setSessionsLoading(false);
     }
-  };
+  }, [role]);
 
   useEffect(() => {
     try {
@@ -161,7 +193,7 @@ export default function App() {
 
   useEffect(() => {
     refreshSessions(role);
-  }, [role]);
+  }, [role, refreshSessions]);
 
   useEffect(() => {
     if (role !== "viewer") {
@@ -179,19 +211,84 @@ export default function App() {
 
     const hasSelected = sessions.some((s) => s.id === selectedSessionId);
     if (!hasSelected) {
-      const preferred = sessions.find((s) => s.status === "LIVE") || sessions[0];
+      const preferred = sessions.find((s) => normalizeSessionStatus(s.status) === "running") || sessions[0];
       setSelectedSessionId(preferred.id);
     }
 
     if (activeSessionId) {
       const active = sessions.find((s) => s.id === activeSessionId);
       if (active) {
-        setSessionStatus(active.status === "LIVE" ? "running" : active.status.toLowerCase());
+        setSessionStatus(normalizeSessionStatus(active.status));
       }
     }
   }, [sessions, selectedSessionId, activeSessionId]);
 
   useEffect(() => {
+    // ── Firebase realtime path ──────────────────────────────────────────────
+    if (isFirebaseConfigured) {
+      if (!activeSessionId) {
+        setWsState("offline");
+        setPresenceCount(0);
+        return;
+      }
+
+      setWsState("connecting");
+      const uid = getLocalUserId(role);
+      let unsubLayout = null;
+      let unsubParticipants = null;
+      let disposed = false;
+
+      (async () => {
+        try {
+          // Register presence
+          await fbJoinSession(activeSessionId, uid, role);
+          if (disposed) return;
+
+          // Load initial layout snapshot
+          const initialLayout = await fbGetLayout(activeSessionId);
+          if (disposed) return;
+          applyRemoteLayout(initialLayout.version, initialLayout.layout);
+
+          // Subscribe to live layout updates
+          unsubLayout = fbSubscribeLayout(activeSessionId, (data) => {
+            if (disposed) return;
+            const nextRemote = { version: data.version || 0, layout: data.layout || { panels: [] } };
+            if (role === "viewer" && !followPresenterRef.current) {
+              setQueuedPresenterLayout(nextRemote);
+              return;
+            }
+            applyRemoteLayout(nextRemote.version, nextRemote.layout);
+            setQueuedPresenterLayout(null);
+            setLayoutSyncError("");
+          });
+
+          // Subscribe to participant count
+          unsubParticipants = fbSubscribeParticipants(activeSessionId, (count) => {
+            if (!disposed) setPresenceCount(count);
+          });
+
+          if (!disposed) {
+            setWsConnected(true);
+            setWsState("connected");
+          }
+        } catch (err) {
+          if (!disposed) {
+            setWsState("disconnected");
+            setLayoutSyncError(err instanceof Error ? err.message : "Firebase sync unavailable.");
+            pushToast("error", "Firebase sync unavailable");
+          }
+        }
+      })();
+
+      return () => {
+        disposed = true;
+        if (unsubLayout) unsubLayout();
+        if (unsubParticipants) unsubParticipants();
+        setWsConnected(false);
+      };
+    }
+
+    // ── Original WebSocket path (backend fallback) ──────────────────────────
     let disposed = false;
 
     const scheduleReconnect = () => {
@@ -216,7 +313,7 @@ export default function App() {
         return;
       }
 
-      setWsState(wsReconnectCount > 0 ? "reconnecting" : "connecting");
+      setWsState(wsReconnectCountRef.current > 0 ? "reconnecting" : "connecting");
       try {
         const join = await joinSession(role, activeSessionId);
         const layout = await getLayout(role, activeSessionId);
@@ -238,7 +335,7 @@ export default function App() {
           clearTimeout(reconnectTimerRef.current);
           setWsConnected(true);
           setWsState("connected");
-          if (wsReconnectCount > 0) pushToast("success", "Realtime reconnected");
+          if (wsReconnectCountRef.current > 0) pushToast("success", "Realtime reconnected");
           setWsReconnectCount(0);
         };
         ws.onclose = () => {
@@ -278,7 +375,7 @@ export default function App() {
       } catch (err) {
         if (disposed) return;
         setLayoutSyncError(err instanceof Error ? err.message : "Realtime sync unavailable.");
-        if (wsReconnectCount === 0) pushToast("error", "Realtime sync unavailable");
+        if (wsReconnectCountRef.current === 0) pushToast("error", "Realtime sync unavailable");
         scheduleReconnect();
       }
     };
@@ -299,13 +396,15 @@ export default function App() {
     if (!activeSessionId || role === "viewer") return;
     const baseVersion = layoutVersionRef.current;
     try {
-      const response = await publishLayout(role, activeSessionId, baseVersion, gridToLayout(nextGrid));
+      const response = isFirebaseConfigured
+        ? await fbPublishLayout(activeSessionId, baseVersion, gridToLayout(nextGrid))
+        : await publishLayout(role, activeSessionId, baseVersion, gridToLayout(nextGrid));
       const nextVersion = response?.version ?? baseVersion;
       layoutVersionRef.current = nextVersion;
       setLayoutVersion(nextVersion);
       setLayoutSyncError("");
     } catch (err) {
-      if ((err?.status === 409 || err?.code === "LAYOUT_VERSION_CONFLICT") && activeSessionId) {
+      if (!isFirebaseConfigured && (err?.status === 409 || err?.code === "LAYOUT_VERSION_CONFLICT") && activeSessionId) {
         try {
           const latest = await getLayout(role, activeSessionId);
           applyRemoteLayout(latest.version, latest.layout);
@@ -365,6 +464,7 @@ export default function App() {
     const nextMode =
       presetId === "teaching" ? "3x1" : presetId === "focus" ? "1x1" : "2x2";
     setLayoutMode(nextMode);
+    setActivePreset(presetId === "clear" ? null : presetId);
     updateGridSources(next, { publish: true, trackHistory: true });
     pushToast("success", `Layout preset applied: ${presetId}`);
   };
@@ -380,6 +480,7 @@ export default function App() {
     const previous = layoutHistoryRef.current[layoutHistoryRef.current.length - 1];
     layoutHistoryRef.current = layoutHistoryRef.current.slice(0, -1);
     setCanUndoLayout(layoutHistoryRef.current.length > 0);
+    setActivePreset(null);
     updateGridSources(previous, { publish: true, trackHistory: false });
     pushToast("success", "Layout undo applied");
   };
@@ -389,6 +490,7 @@ export default function App() {
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (!active || !over) return;
+    setActivePreset(null);
 
     const activeData = active.data.current || {};
     const overData = over.data.current || {};
@@ -441,18 +543,26 @@ export default function App() {
     try {
       let sessionId = activeSessionId || selectedSessionId;
       if (!sessionId) {
-        const created = await createSession(role, `Live Session ${new Date().toISOString()}`);
+        const created = isFirebaseConfigured
+          ? await fbCreateSession(`Live Session ${new Date().toLocaleString()}`)
+          : await createSession(role, `Live Session ${new Date().toISOString()}`);
         sessionId = created.id;
         setSelectedSessionId(sessionId);
         setActiveSessionId(sessionId);
       }
-      await startSession(role, sessionId);
+      if (isFirebaseConfigured) {
+        await fbStartSession(sessionId);
+      } else {
+        await startSession(role, sessionId);
+      }
       setSessionStatus("running");
       await refreshSessions(role);
       pushToast("success", "Session started");
     } catch (err) {
-      setSessionsError(err instanceof Error ? err.message : "Could not start session");
-      pushToast("error", "Could not start session");
+      const msg = err instanceof Error ? err.message : "Could not start session";
+      console.error("[handleStart]", err);
+      setSessionsError(msg);
+      pushToast("error", msg);
     }
   };
 
@@ -465,14 +575,16 @@ export default function App() {
     setActiveSessionId(selectedSessionId);
     setWsReconnectCount(0);
     setWsReconnectTick((tick) => tick + 1);
-    setSessionStatus(selected?.status === "LIVE" ? "running" : "idle");
+    setSessionStatus(normalizeSessionStatus(selected?.status));
     pushToast("success", "Joined session");
   };
 
   const handleCreateSessionDraft = async () => {
     if (!canControlSession) return;
     try {
-      const created = await createSession(role, `Live Session ${new Date().toISOString()}`);
+      const created = isFirebaseConfigured
+        ? await fbCreateSession(`Live Session ${new Date().toLocaleString()}`)
+        : await createSession(role, `Live Session ${new Date().toISOString()}`);
       await refreshSessions(role);
       setSelectedSessionId(created.id);
       setActiveSessionId(created.id);
@@ -483,12 +595,23 @@ export default function App() {
     }
   };
 
-  const handlePause = () => setSessionStatus("paused");
+  const handlePause = async () => {
+    setSessionStatus("paused");
+    if (isFirebaseConfigured && activeSessionId) {
+      try { await fbPauseSession(activeSessionId); } catch { /* non-critical */ }
+    }
+  };
 
   const handleStop = async () => {
     if (!canControlSession) return;
     try {
-      if (activeSessionId) await endSession(role, activeSessionId);
+      if (activeSessionId) {
+        if (isFirebaseConfigured) {
+          await fbEndSession(activeSessionId);
+        } else {
+          await endSession(role, activeSessionId);
+        }
+      }
       setSessionStatus("stopped");
       await refreshSessions(role);
       pushToast("success", "Session stopped");
@@ -523,6 +646,17 @@ export default function App() {
     pushToast("success", "Synced latest presenter layout");
   };
 
+  // Stable refs so the keyboard listener (mounted once) always calls the
+  // latest version of these async handlers without re-registering on every render.
+  const handleStartRef = useRef(handleStart);
+  const handlePauseRef = useRef(handlePause);
+  const handleStopRef  = useRef(handleStop);
+  useEffect(() => {
+    handleStartRef.current = handleStart;
+    handlePauseRef.current = handlePause;
+    handleStopRef.current  = handleStop;
+  });
+
   useEffect(() => {
     const isTyping = () => {
       const el = document.activeElement;
@@ -536,22 +670,31 @@ export default function App() {
       );
     };
 
+    const HANDLED_KEYS = new Set(["escape", "s", "p", "x", "i", "c", "?"]);
+
     const onKey = (e) => {
-      if (isTyping()) return;
       const key = e.key?.toLowerCase();
-      if (key === "s") handleStart();
-      else if (key === "p") handlePause();
-      else if (key === "x") handleStop();
+      if (!HANDLED_KEYS.has(key)) return;
+
+      if (key === "escape") { setShowShortcutsHelp(false); return; }
+      if (isTyping()) return;
+
+      // Prevent browser defaults (find-in-page, save-as, etc.)
+      e.preventDefault();
+
+      if (key === "s") handleStartRef.current();
+      else if (key === "p") handlePauseRef.current();
+      else if (key === "x") handleStopRef.current();
       else if (key === "i") setShowPatientInfoPanel(true);
       else if (key === "c") {
         setShowChatPanel(true);
         setUnreadCount(0);
-      }
+      } else if (key === "?") setShowShortcutsHelp((v) => !v);
     };
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  });
+  }, []); // mount once — handlers stay current via refs above
 
   return (
     <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-surface text-default flex flex-col">
@@ -565,6 +708,15 @@ export default function App() {
       />
 
       <div className="fixed right-3 bottom-3 z-30 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => setShowShortcutsHelp((v) => !v)}
+          className="rounded-full h-8 w-8 flex items-center justify-center theme-panel shadow text-subtle hover:text-default transition-colors"
+          title="Keyboard shortcuts (?)"
+          aria-label="Show keyboard shortcuts"
+        >
+          <Keyboard className="h-4 w-4" />
+        </button>
         <button
           type="button"
           onClick={() => setShowPatientInfoPanel(true)}
@@ -591,22 +743,92 @@ export default function App() {
         </button>
       </div>
 
+      {/* WS disconnect / reconnect sticky banner */}
+      {wsState !== "connected" && wsState !== "connecting" && (
+        <div className={`sticky top-0 z-40 flex items-center justify-center gap-2 py-1 px-3 text-xs ${
+          wsState === "reconnecting"
+            ? "bg-amber-950/80 border-b border-amber-700/40 text-amber-300"
+            : "bg-red-950/80 border-b border-red-700/40 text-red-300"
+        } backdrop-blur-sm`}>
+          <WifiOff className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {wsState === "reconnecting"
+            ? `Reconnecting${wsReconnectCount > 0 ? ` (${wsReconnectCount})` : ""}… changes will not sync`
+            : "WebSocket offline — changes will not sync"}
+        </div>
+      )}
+
+      {/* Keyboard shortcuts help overlay */}
+      {showShortcutsHelp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowShortcutsHelp(false)}
+        >
+          <div
+            className="theme-panel rounded-xl p-5 shadow-2xl w-72"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Keyboard className="h-4 w-4 text-subtle" aria-hidden />
+                <h3 className="font-semibold text-default text-sm">Keyboard Shortcuts</h3>
+              </div>
+              <button
+                onClick={() => setShowShortcutsHelp(false)}
+                className="text-subtle hover:text-default transition-colors"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 text-sm">
+              {[
+                ["S", "Start session"],
+                ["P", "Pause session"],
+                ["X", "Stop session"],
+                ["I", "Patient info"],
+                ["C", "Live chat"],
+                ["?", "Toggle this help"],
+                ["Esc", "Close panels"],
+              ].map(([key, desc]) => (
+                <Fragment key={key}>
+                  <kbd className="badge-btn font-mono text-xs text-center min-w-[2rem] justify-center">{key}</kbd>
+                  <dd className="text-subtle self-center m-0">{desc}</dd>
+                </Fragment>
+              ))}
+            </dl>
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 w-full px-4 py-4 sm:py-6 lg:py-2 lg:overflow-hidden">
         {toasts.length > 0 && (
-          <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm">
+          <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
             {toasts.map((toast) => (
               <div
                 key={toast.id}
-                className={`theme-panel border-default border px-3 py-2 text-sm flex items-center gap-2 ${
-                  toast.kind === "error" ? "text-red-400" : toast.kind === "warning" ? "text-amber-300" : "text-emerald-300"
+                className={`ls-toast pointer-events-auto rounded-lg shadow-lg border px-3 py-2.5 text-sm flex items-center gap-2.5 bg-surface ${
+                  toast.kind === "error"
+                    ? "border-red-500/40 text-red-400"
+                    : toast.kind === "warning"
+                      ? "border-amber-500/40 text-amber-300"
+                      : "border-emerald-500/40 text-emerald-400"
                 }`}
               >
                 {toast.kind === "error" ? (
-                  <AlertCircle className="h-4 w-4" />
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                ) : toast.kind === "warning" ? (
+                  <AlertCircle className="h-4 w-4 shrink-0" />
                 ) : (
-                  <CheckCircle2 className="h-4 w-4" />
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
                 )}
-                <span className="text-default">{toast.message}</span>
+                <span className="text-default flex-1 text-xs sm:text-sm">{toast.message}</span>
+                <button
+                  onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
+                  className="shrink-0 text-subtle hover:text-default transition-colors"
+                  aria-label="Dismiss"
+                >
+                  ×
+                </button>
               </div>
             ))}
           </div>
@@ -622,19 +844,34 @@ export default function App() {
               <>
                 <div className="theme-panel p-1.5 sm:p-2 border-default border">
                   <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs">
-                    <span className={`px-2 py-1 rounded-full border ${sessionStatus === "running" ? "text-emerald-300 border-emerald-500/40" : "text-amber-300 border-amber-500/40"}`}>
+                    {/* Session status badge */}
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border font-medium ${sessionStatus === "running" ? "text-emerald-400 border-emerald-500/50" : "text-amber-300 border-amber-500/40"}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${sessionStatus === "running" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} aria-hidden />
                       {sessionStatus.toUpperCase()}
                     </span>
                     <span className="text-subtle">Role:</span>
                     <span className="badge-btn">{role}</span>
                     <span className="text-subtle">Session:</span>
                     <span className="font-mono text-default">{activeSessionId ? activeSessionId.slice(0, 8) : "none"}</span>
-                    <span className="text-subtle">Participants:</span>
-                    <span className="text-default">{presenceCount}</span>
-                    <span className="text-subtle">Sync:</span>
-                    <span className={syncClass}>{syncLabel}</span>
-                    <span className="text-subtle">Layout:</span>
-                    <span className="text-default">v{layoutVersion} ({layoutMode})</span>
+                    {/* Participants */}
+                    <span className="inline-flex items-center gap-1 text-subtle">
+                      <Users className="h-3 w-3" aria-hidden />
+                      <span className="text-default">{presenceCount}</span>
+                    </span>
+                    {/* Sync status */}
+                    <span className={`inline-flex items-center gap-1 ${syncClass}`}>
+                      {wsState === "connected" ? (
+                        <Wifi className="h-3 w-3" aria-hidden />
+                      ) : (
+                        <WifiOff className="h-3 w-3" aria-hidden />
+                      )}
+                      {syncLabel}
+                    </span>
+                    {/* Layout version */}
+                    <span className="inline-flex items-center gap-1 text-subtle">
+                      <LayoutDashboard className="h-3 w-3" aria-hidden />
+                      <span className="text-default">v{layoutVersion} · {layoutMode}</span>
+                    </span>
                   </div>
                   {layoutSyncError && <div className="text-xs text-red-400 mt-1">{layoutSyncError}</div>}
                   {role === "viewer" && (
@@ -691,9 +928,19 @@ export default function App() {
                     <>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span className="text-xs text-subtle">Layout actions</span>
-                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("quad")}>Quad</button>
-                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("focus")}>Focus</button>
-                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("teaching")}>Teaching</button>
+                        {[
+                          { id: "quad", label: "Quad" },
+                          { id: "focus", label: "Focus" },
+                          { id: "teaching", label: "Teaching" },
+                        ].map(({ id, label }) => (
+                          <button
+                            key={id}
+                            className={`badge-btn text-xs ${activePreset === id ? "ring-1 ring-teal-400 text-teal-400" : ""}`}
+                            onClick={() => applyLayoutPreset(id)}
+                          >
+                            {label}
+                          </button>
+                        ))}
                         <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("clear")}>Reset</button>
                         <button className="badge-btn text-xs" onClick={handleUndoLayout} disabled={!canUndoLayout}>Undo</button>
                       </div>
@@ -719,6 +966,7 @@ export default function App() {
                       role={role}
                       selectedSource={selectedSource}
                       onSelectSource={handleSelectSource}
+                      gridSources={gridSources}
                     />
                     {selectedSource && canEditLayout && (
                       <div className="mt-1 flex items-center gap-1.5 flex-wrap">
@@ -736,7 +984,7 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="lg:col-span-1 theme-panel p-2 sm:p-2.5 shadow flex flex-col justify-center">
+                  <div className="lg:col-span-1 flex flex-col justify-center">
                     <SessionControls
                       onStart={handleStart}
                       onPause={handlePause}
@@ -785,16 +1033,27 @@ export default function App() {
             {currentTab === "Live" && (
               <>
                 <div className="theme-panel p-2 sm:p-3 border-default border">
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className={`px-2 py-1 rounded-full border ${sessionStatus === "running" ? "text-emerald-300 border-emerald-500/40" : "text-amber-300 border-amber-500/40"}`}>
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs">
+                    {/* Session status badge */}
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border font-medium ${sessionStatus === "running" ? "text-emerald-400 border-emerald-500/50" : "text-amber-300 border-amber-500/40"}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${sessionStatus === "running" ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} aria-hidden />
                       {sessionStatus.toUpperCase()}
                     </span>
-                    <span className="text-subtle">Sync:</span>
-                    <span className={syncClass}>{syncLabel}</span>
-                    <span className="text-subtle">Participants:</span>
-                    <span className="text-default">{presenceCount}</span>
-                    <span className="text-subtle">Layout:</span>
-                    <span className="text-default">v{layoutVersion} ({layoutMode})</span>
+                    {/* Sync */}
+                    <span className={`inline-flex items-center gap-1 ${syncClass}`}>
+                      {wsState === "connected" ? <Wifi className="h-3 w-3" aria-hidden /> : <WifiOff className="h-3 w-3" aria-hidden />}
+                      {syncLabel}
+                    </span>
+                    {/* Participants */}
+                    <span className="inline-flex items-center gap-1 text-subtle">
+                      <Users className="h-3 w-3" aria-hidden />
+                      <span className="text-default">{presenceCount}</span>
+                    </span>
+                    {/* Layout */}
+                    <span className="inline-flex items-center gap-1 text-subtle">
+                      <LayoutDashboard className="h-3 w-3" aria-hidden />
+                      <span className="text-default">v{layoutVersion} · {layoutMode}</span>
+                    </span>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <select
@@ -818,9 +1077,19 @@ export default function App() {
                     </button>
                     {canEditLayout && (
                       <>
-                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("quad")}>Quad</button>
-                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("focus")}>Focus</button>
-                        <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("teaching")}>Teaching</button>
+                        {[
+                          { id: "quad", label: "Quad" },
+                          { id: "focus", label: "Focus" },
+                          { id: "teaching", label: "Teaching" },
+                        ].map(({ id, label }) => (
+                          <button
+                            key={id}
+                            className={`badge-btn text-xs ${activePreset === id ? "ring-1 ring-teal-400 text-teal-400" : ""}`}
+                            onClick={() => applyLayoutPreset(id)}
+                          >
+                            {label}
+                          </button>
+                        ))}
                         <button className="badge-btn text-xs" onClick={() => applyLayoutPreset("clear")}>Reset</button>
                         <button className="badge-btn text-xs" onClick={handleUndoLayout} disabled={!canUndoLayout}>Undo</button>
                         {["2x2", "3x1", "1x3", "1x1"].map((mode) => (
@@ -856,6 +1125,7 @@ export default function App() {
                   role={role}
                   selectedSource={selectedSource}
                   onSelectSource={handleSelectSource}
+                  gridSources={gridSources}
                 />
                 {selectedSource && canEditLayout && (
                   <div className="mt-1 flex items-center gap-2 flex-wrap">
@@ -873,7 +1143,7 @@ export default function App() {
                 )}
 
                 <div className="flex-1 theme-panel p-3 sm:p-4 shadow relative flex flex-col min-h-0">
-                  <div className="theme-panel p-3 sm:p-4 mb-3">
+                  <div className="mb-3">
                     <SessionControls
                       onStart={handleStart}
                       onPause={handlePause}
