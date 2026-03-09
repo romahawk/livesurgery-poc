@@ -37,7 +37,7 @@ flowchart LR
 
   API --> DB[(Postgres)]
   API --> OBJ[(Object Storage)]
-  API --> IDP[Identity Provider (OIDC)]
+  API --> IDP["Identity Provider (OIDC)"]
 
   SFU --> TURN[STUN/TURN]
   SFU --> REC[Recording Worker]
@@ -53,19 +53,19 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph Client
-    B[Browser (React SPA)]
+    B["Browser (React SPA)"]
   end
 
   subgraph Edge
-    V[Vercel (Static Hosting)]
+    V["Vercel (Static Hosting)"]
   end
 
   subgraph Backend
-    API[API Service (REST)]
-    WS[Realtime Gateway (WebSocket)]
+    API["API Service (REST)"]
+    WS["Realtime Gateway (WebSocket)"]
     DB[(Postgres)]
-    OBJ[(S3-compatible Storage)]
-    R[(Redis - optional)]
+    OBJ[("S3-compatible Storage")]
+    R[("Redis - optional")]
   end
 
   subgraph Media
