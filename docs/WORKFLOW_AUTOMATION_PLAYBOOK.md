@@ -8,8 +8,8 @@ Describes every automated workflow in `.github/workflows/` and how to configure 
 
 | File | Trigger | Purpose |
 |---|---|---|
-| [`ci.yml`](.github/workflows/ci.yml) | Push (main, develop, feature/\*\*, claude/\*\*), PR | Lint + build + test (frontend + backend) |
-| [`weekly-sync.yml`](.github/workflows/weekly-sync.yml) | Cron (Monday 09:00 UTC), manual | Opens a "Weekly Roadmap Sync" GitHub issue |
+| [`ci.yml`](../.github/workflows/ci.yml) | Push (main, develop, feature/\*\*, claude/\*\*), PR | Lint + build + test (frontend + backend) |
+| [`weekly-sync.yml`](../.github/workflows/weekly-sync.yml) | Cron (Monday 09:00 UTC), manual | Opens a "Weekly Roadmap Sync" GitHub issue |
 
 ---
 
