@@ -7,7 +7,20 @@ Each week has a clear outcome statement, 3–6 issues, and a Definition of Done 
 
 ## Current state (PoC — Sprints 1–8 complete)
 
-### Done
+### Done — Sprint history
+
+| Sprint | Theme | Key deliverables |
+|---|---|---|
+| [Sprint 1](SPRINTS/sprint-01.md) | Project skeleton | FastAPI + Vite + Tailwind scaffold |
+| [Sprint 2](SPRINTS/sprint-02.md) | OR layout & components | Navbar, Sidebar, DisplayGrid, SessionControls, PatientInfo, Chat |
+| [Sprint 3](SPRINTS/sprint-03.md) | Onboarding, DnD, Archive, Analytics | dnd-kit drag-drop, Recharts, ArchiveTab, OnboardingModal |
+| [Sprint 4](SPRINTS/sprint-04.md) | Docs + backend integration | README rewrite, ARCHITECTURE, PRD, ROADMAP, /video/simulate |
+| [Sprint 5](SPRINTS/sprint-05.md) | AI Production OS v1 adoption | DECISIONS_LOG, CHANGELOG, .env.example, PR/Issue templates |
+| [Sprint 6](SPRINTS/sprint-06.md) | Stabilization + Hardening | /healthz, Vitest (4 tests), Dockerfile, docker-compose, CORS env |
+| [Sprint 7](SPRINTS/sprint-07.md) | Auth boundary | POST /auth/token, Bearer tokens, AUTH_MIGRATION.md |
+| [Sprint 8](SPRINTS/sprint-08.md) | AI Production OS v2 compliance | CLAUDE.md, weekly-sync.yml, vercel.json, doc renames, sprint docs |
+
+**Full done list:**
 - Vite + React 19 + Tailwind SPA
 - Multi-panel OR workspace (2×2, 3×1, 1×3, 1×1) with layout presets + undo history
 - HTML5 video assets with source selection + drag-and-drop (dnd-kit)
@@ -20,7 +33,7 @@ Each week has a clear outcome statement, 3–6 issues, and a Definition of Done 
 - CI: ESLint + Vite build + Vitest (4 tests) + ruff + black + pytest — all passing
 - Archive tab (mock data) + Analytics dashboard (mock data, last 7 days)
 - Dark / light theme; onboarding modal + keyboard shortcuts (S / P / X / I / C / ?)
-- Docs: PRD, Architecture, Roadmap, DECISIONS_LOG, CHANGELOG, Sprint 1–7, AUTH_MIGRATION
+- Docs: PRD, Architecture, Roadmap, DECISIONS_LOG, CHANGELOG, Sprint 1–8, AUTH_MIGRATION
 - AI Production OS compliance: CLAUDE.md, weekly-sync workflow, SPRINT_BACKLOG, DAILY_CHECKLIST,
   NEXT_SESSION_START, WORKFLOW_AUTOMATION_PLAYBOOK, vercel.json SPA rewrite
 
@@ -44,7 +57,7 @@ Each week has a clear outcome statement, 3–6 issues, and a Definition of Done 
 
 ## Month 1 — Stabilise + Auth layer ✅ Complete
 
-### Week 1–2: Stabilise + ship 1 visible improvement ✅
+### Week 1–2 · Sprint 6: Stabilise + ship 1 visible improvement ✅
 
 **Outcome:** Repo is clean, testable, and has one user-visible quality win deployed.
 
@@ -57,7 +70,7 @@ Each week has a clear outcome statement, 3–6 issues, and a Definition of Done 
 
 ---
 
-### Week 3–4: Auth layer ✅
+### Week 3–4 · Sprint 7: Auth layer ✅
 
 **Outcome:** Auth is no longer a header toy — tokens are explicit and the boundary is documented.
 
@@ -71,7 +84,7 @@ Each week has a clear outcome statement, 3–6 issues, and a Definition of Done 
 
 ## Month 2 — Backend deployment + Real data
 
-### Week 5–6: Deploy backend
+### Week 5–6 · Sprint 9: Deploy backend
 
 **Outcome:** Backend is reachable from a public URL; frontend demo no longer requires local backend.
 
@@ -92,7 +105,7 @@ Each week has a clear outcome statement, 3–6 issues, and a Definition of Done 
 
 ---
 
-### Week 7–8: Real analytics + archive endpoints
+### Week 7–8 · Sprint 10: Real analytics + archive endpoints
 
 **Outcome:** Analytics and Archive tabs show real session data from the database.
 
@@ -115,7 +128,7 @@ Each week has a clear outcome statement, 3–6 issues, and a Definition of Done 
 
 ## Month 3 — WebRTC MVP proof
 
-### Week 9–10: SFU integration (LiveKit or Daily.co managed)
+### Week 9–10 · Sprint 11: SFU integration (LiveKit or Daily.co managed)
 
 **Outcome:** A surgeon can publish a camera track; an observer can subscribe to it. HTML5 video is bypassed for live streams.
 
@@ -136,7 +149,7 @@ Each week has a clear outcome statement, 3–6 issues, and a Definition of Done 
 
 ---
 
-### Week 11–12: Hardening + portfolio polish
+### Week 11–12 · Sprint 12: Hardening + portfolio polish
 
 **Outcome:** Repo is demo-ready for job applications and accelerator submissions.
 
