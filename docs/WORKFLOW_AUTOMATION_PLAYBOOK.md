@@ -1,88 +1,94 @@
 # Workflow Automation Playbook
 
-Describes every automated workflow in `.github/workflows/` and how to configure them for a new project.
+**Project:** AlphaRhythm
+**Last updated:** 2026-03-08
+
+This document lists every automated workflow, when it runs, what it does, and how to maintain it.
 
 ---
 
-## Workflows in this repository
+## Workflows in this repo
 
-| File | Trigger | Purpose |
+### 1. CI — Build + Lint
+
+**File:** `.github/workflows/ci.yml`
+**Triggers:** `push` to any branch, `pull_request` to any branch
+**Runtime:** ~60–90s on ubuntu-latest
+
+**What it does:**
+1. Checks out code
+2. Installs Node 20 with npm cache
+3. `npm ci` — clean install
+4. `npm run lint` — ESLint v9 flat config (`eslint.config.js`)
+5. `npm run build` — Vite production build
+
+**Pass condition:** All steps exit 0.
+**Failure action:** Do not merge the PR until fixed. Do not bypass with `--no-verify`.
+
+**Maintenance:**
+- If you upgrade ESLint, update `eslint.config.js` accordingly
+- If you add a `test` script, add `npm test` after the lint step
+- Node version pin is in the `node-version:` field — update when LTS changes
+
+---
+
+### 2. Weekly Roadmap Sync
+
+**File:** `.github/workflows/weekly-sync.yml`
+**Triggers:** Cron `0 8 * * 1` (Monday 08:00 UTC), or manually via `workflow_dispatch`
+**Runtime:** < 10s
+
+**What it does:**
+1. Computes current week label (`Week of YYYY-MM-DD`)
+2. Opens a GitHub issue titled `📅 Weekly Roadmap Sync — Week of YYYY-MM-DD`
+3. Issue body is a review checklist covering: roadmap, sprint backlog, build gates, changelog, NEXT_SESSION_START
+
+**Pass condition:** Issue opened successfully.
+**Failure action:** Check GitHub Actions permissions — the workflow requires `issues: write`.
+
+**Maintenance:**
+- If you rename the repo, the `github.rest.issues.create` call continues to work via `context.repo`
+- Add or remove checklist items by editing the `body` array in the `actions/github-script` step
+- To add a label automatically, ensure `weekly-sync` label exists in the repo's Labels settings
+
+---
+
+## Policy checks (manual)
+
+The following checks have no automation yet and are performed manually at the start of each sprint:
+
+| Check | Frequency | How |
 |---|---|---|
-| [`ci.yml`](.github/workflows/ci.yml) | Push (main, develop, feature/\*\*, claude/\*\*), PR | Lint + build + test (frontend + backend) |
-| [`weekly-sync.yml`](.github/workflows/weekly-sync.yml) | Cron (Monday 09:00 UTC), manual | Opens a "Weekly Roadmap Sync" GitHub issue |
+| Audit against AI Production OS guardrails | Per sprint | Run the full audit prompt against this repo |
+| `docs/NEXT_SESSION_START.md` updated | End of session | Claude updates this file before final commit |
+| `CHANGELOG.md` updated | Per PR merge | Add entry under `[Unreleased]` before merging |
+| `docs/SPRINT_BACKLOG.md` triaged | Weekly | Promoted by weekly sync issue |
 
 ---
 
-## ci.yml
+## Planned workflows (not yet implemented)
 
-**Purpose:** Enforce code quality gates on every push and every pull request.
-
-**Jobs:**
-
-| Job | Steps |
-|---|---|
-| `frontend` | `npm ci` → `npm run lint` → `npm test` → `npm run build` |
-| `backend` | `pip install` → `ruff check` → `black --check` → `pytest -q` |
-
-**Key config:**
-```yaml
-on:
-  push:
-    branches: [main, develop, feature/**, claude/**]
-  pull_request:
-```
-
-**How to copy to a new project:**
-1. Copy `.github/workflows/ci.yml` to the new repo.
-2. Update `working-directory` under `frontend:` to match the new frontend directory.
-3. Update `ruff check` / `black --check` paths to match the new backend directory.
-4. If the project is frontend-only, delete the `backend:` job.
-5. Adjust `node-version` and `python-version` to match the project's toolchain.
-
-**Required repository settings:**
-- Branch protection on `main` → require status checks `frontend` and `backend` to pass.
-- No direct pushes to `main` without a passing CI run.
-
----
-
-## weekly-sync.yml
-
-**Purpose:** On every Monday morning, open a GitHub issue as a structured weekly planning prompt.
-
-**Trigger:** `cron: '0 9 * * 1'` — 09:00 UTC every Monday. Also supports `workflow_dispatch` for manual testing.
-
-**Permissions required:** `issues: write` (declared at job level — uses default `GITHUB_TOKEN`).
-
-**What it creates:**
-- Title: `Weekly Roadmap Sync — YYYY-MM-DD`
-- Body: review checklist linking to `docs/ROADMAP.md`, `docs/SPRINT_BACKLOG.md`, `CHANGELOG.md`, `docs/NEXT_SESSION_START.md`
-- Labels: `chore`, `weekly-sync`
-
-**How to copy to a new project:**
-1. Copy `.github/workflows/weekly-sync.yml` to the new repo.
-2. Update the issue body's file paths to match the new project's doc structure.
-3. Create `chore` and `weekly-sync` labels in GitHub: **Settings → Labels → New label**.
-4. Optionally change the cron time (`0 9 * * 1` = Monday 09:00 UTC).
-5. Confirm `issues: write` is set — GitHub requires this explicitly for issue creation via `GITHUB_TOKEN`.
-
-**Label note:** If `chore` or `weekly-sync` labels don't exist in the target repo, the issue is still created but label assignment fails silently. Create labels first, or remove the `labels:` field from the script.
-
----
-
-## Required secrets / permissions
-
-| Workflow | Secret | Permission | Notes |
+| Workflow | Priority | Trigger | Purpose |
 |---|---|---|---|
-| `ci.yml` | None | Default `GITHUB_TOKEN` (read) | No extra config needed |
-| `weekly-sync.yml` | None | `issues: write` | Declared in workflow — no repo secret required |
+| `policy-check.yml` | Medium | PR | Run the AI Production OS audit and post results as a PR comment |
+| `deploy-preview.yml` | Low | PR | Trigger Vercel preview deploy and post URL in PR |
+
+---
+
+## Secrets required
+
+| Secret | Used by | Purpose |
+|---|---|---|
+| `GITHUB_TOKEN` (auto) | `weekly-sync.yml` | Open issues |
+| None currently | `ci.yml` | No secrets needed for build/lint |
+
+For Firebase, `.env` is not committed. See `README.md` setup section for required keys.
 
 ---
 
 ## Adding a new workflow
 
-1. Create `.github/workflows/<name>.yml`.
-2. Define `on:` triggers, `permissions:`, and `jobs:`.
-3. Add a row to the table at the top of this file.
-4. Add any required labels in GitHub Settings → Labels.
-5. Document any required secrets in `.env.example` and in the table above.
-6. If the workflow requires manual follow-up, add a step to `docs/DAILY_CHECKLIST.md`.
+1. Create `.github/workflows/your-name.yml`
+2. Add it to this playbook (file name, triggers, what it does)
+3. Test with `workflow_dispatch` before relying on the schedule trigger
+4. Ensure `permissions:` block is as narrow as possible (principle of least privilege)
