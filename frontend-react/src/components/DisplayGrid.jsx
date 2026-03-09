@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { LayoutDashboard, X, Maximize2 } from "lucide-react";
+import { LayoutDashboard, X, Maximize2, VideoOff } from "lucide-react";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -24,6 +24,9 @@ export default function DisplayGrid({
     "contain",
     "contain",
   ]);
+  // Track which panels have a broken video: { [panelIndex]: srcFilename }
+  // Automatically resets when a different source is placed in the same slot.
+  const [videoErrors, setVideoErrors] = useState({});
 
   const handleRemove = (index) => {
     setGridSources?.((prev) => {
@@ -100,24 +103,29 @@ export default function DisplayGrid({
       >
         {src ? (
           <>
-            <video
-              key={src}
-              src={`/videos/${src}`}
-              className="w-full h-full rounded-xl"
-              style={{ objectFit: fitMode[index] }}
-              controls
-              autoPlay
-              muted
-              playsInline
-              loop
-              onError={(e) =>
-                console.warn(
-                  "Video failed:",
-                  `/videos/${src}`,
-                  e.currentTarget?.error
-                )
-              }
-            />
+            {/* hasError: true when the current src failed to load */}
+            {videoErrors[index] === src ? (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-2 rounded-xl text-subtle pointer-events-none select-none">
+                <VideoOff className="h-8 w-8 opacity-40" aria-hidden />
+                <span className="text-xs">{SRC_LABEL[src] ?? src}</span>
+                <span className="text-[10px] opacity-60">Feed unavailable</span>
+              </div>
+            ) : (
+              <video
+                key={src}
+                src={`/videos/${src}`}
+                className="w-full h-full rounded-xl"
+                style={{ objectFit: fitMode[index] }}
+                controls
+                autoPlay
+                muted
+                playsInline
+                loop
+                onError={() =>
+                  setVideoErrors((prev) => ({ ...prev, [index]: src }))
+                }
+              />
+            )}
 
             {/* Toolbar */}
             <div className="absolute top-2 right-2 flex gap-1">

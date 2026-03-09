@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import DisplayGrid from "./components/DisplayGrid";
@@ -646,6 +646,17 @@ export default function App() {
     pushToast("success", "Synced latest presenter layout");
   };
 
+  // Stable refs so the keyboard listener (mounted once) always calls the
+  // latest version of these async handlers without re-registering on every render.
+  const handleStartRef = useRef(handleStart);
+  const handlePauseRef = useRef(handlePause);
+  const handleStopRef  = useRef(handleStop);
+  useEffect(() => {
+    handleStartRef.current = handleStart;
+    handlePauseRef.current = handlePause;
+    handleStopRef.current  = handleStop;
+  });
+
   useEffect(() => {
     const isTyping = () => {
       const el = document.activeElement;
@@ -659,13 +670,21 @@ export default function App() {
       );
     };
 
+    const HANDLED_KEYS = new Set(["escape", "s", "p", "x", "i", "c", "?"]);
+
     const onKey = (e) => {
-      if (e.key === "Escape") { setShowShortcutsHelp(false); return; }
-      if (isTyping()) return;
       const key = e.key?.toLowerCase();
-      if (key === "s") handleStart();
-      else if (key === "p") handlePause();
-      else if (key === "x") handleStop();
+      if (!HANDLED_KEYS.has(key)) return;
+
+      if (key === "escape") { setShowShortcutsHelp(false); return; }
+      if (isTyping()) return;
+
+      // Prevent browser defaults (find-in-page, save-as, etc.)
+      e.preventDefault();
+
+      if (key === "s") handleStartRef.current();
+      else if (key === "p") handlePauseRef.current();
+      else if (key === "x") handleStopRef.current();
       else if (key === "i") setShowPatientInfoPanel(true);
       else if (key === "c") {
         setShowChatPanel(true);
@@ -675,7 +694,7 @@ export default function App() {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  });
+  }, []); // mount once — handlers stay current via refs above
 
   return (
     <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-surface text-default flex flex-col">
@@ -771,10 +790,10 @@ export default function App() {
                 ["?", "Toggle this help"],
                 ["Esc", "Close panels"],
               ].map(([key, desc]) => (
-                <React.Fragment key={key}>
+                <Fragment key={key}>
                   <kbd className="badge-btn font-mono text-xs text-center min-w-[2rem] justify-center">{key}</kbd>
                   <dd className="text-subtle self-center m-0">{desc}</dd>
-                </React.Fragment>
+                </Fragment>
               ))}
             </dl>
           </div>
@@ -947,6 +966,7 @@ export default function App() {
                       role={role}
                       selectedSource={selectedSource}
                       onSelectSource={handleSelectSource}
+                      gridSources={gridSources}
                     />
                     {selectedSource && canEditLayout && (
                       <div className="mt-1 flex items-center gap-1.5 flex-wrap">
@@ -964,7 +984,7 @@ export default function App() {
                     )}
                   </div>
 
-                  <div className="lg:col-span-1 theme-panel p-2 sm:p-2.5 shadow flex flex-col justify-center">
+                  <div className="lg:col-span-1 flex flex-col justify-center">
                     <SessionControls
                       onStart={handleStart}
                       onPause={handlePause}
@@ -1105,6 +1125,7 @@ export default function App() {
                   role={role}
                   selectedSource={selectedSource}
                   onSelectSource={handleSelectSource}
+                  gridSources={gridSources}
                 />
                 {selectedSource && canEditLayout && (
                   <div className="mt-1 flex items-center gap-2 flex-wrap">
@@ -1122,7 +1143,7 @@ export default function App() {
                 )}
 
                 <div className="flex-1 theme-panel p-3 sm:p-4 shadow relative flex flex-col min-h-0">
-                  <div className="theme-panel p-3 sm:p-4 mb-3">
+                  <div className="mb-3">
                     <SessionControls
                       onStart={handleStart}
                       onPause={handlePause}
