@@ -8,6 +8,7 @@ import uuid
 from app.core.database import init_db, get_conn
 from app.core.errors import AppError
 from app.routes import realtime, sessions, video
+from app.routes import auth as auth_routes
 
 app = FastAPI(
     title="Livesurgery PoC API", description="Backend API for Livesurgery PoC", version="0.2.0"
@@ -27,6 +28,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth_routes.router)
 app.include_router(video.router, prefix="/video", tags=["Video Simulation"])
 app.include_router(sessions.router)
 app.include_router(realtime.router)

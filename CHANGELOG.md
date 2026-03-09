@@ -9,6 +9,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `POST /auth/token` endpoint — dev-mode token minting (userId + role → signed HMAC token)
+- Bearer token validation in `get_current_principal()` — primary auth path; dev headers kept as fallback
+- `mint_api_token()` and `_verify_api_token()` in `backend/app/core/auth.py`
+- `backend/app/routes/auth.py` — new auth router
+- Token cache in `frontend-react/src/api/sessions.js` — `ensureToken()` with 60s buffer auto-refresh
+- All frontend API calls now send `Authorization: Bearer <token>`; fallback to dev headers if unavailable
+- `docs/AUTH_MIGRATION.md` — step-by-step OIDC migration guide (Auth0 + Supabase Auth options)
+- `docs/SPRINTS/sprint-07.md`
+
+---
+
+## [0.5.0] — Sprint 6 — Stabilization + Hardening
+
+### Added
+- `GET /healthz` endpoint — liveness + DB readiness check (200 ok / 503 disconnected)
+- Vitest test suite: `BrandLogo.test.jsx` + `sessions-api.test.js` (4 tests)
+- `backend/Dockerfile` — python:3.13-slim, non-root user, HEALTHCHECK
+- `docker-compose.yml` — backend + frontend services, health dependency
 - `docs/DECISIONS_LOG.md` — ADR-style log of architectural decisions
 - `docs/SPRINTS/sprint-05.md` — Sprint 5 backlog (AI Production OS adoption)
 - `.env.example` — documents required/optional env vars for backend
