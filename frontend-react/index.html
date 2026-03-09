@@ -2,12 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Manrope:wght@600;700&display=swap" rel="stylesheet">
-    <title>Livesurgery</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Let the browser know we support both; we’ll choose via <html> class -->
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title>LiveSurgery</title>
+
+    <!-- Apply the theme BEFORE React mounts (prevents flash) -->
+    <script>
+      (function () {
+        const stored = localStorage.getItem('theme'); // 'light' | 'dark' | null
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = stored || (prefersDark ? 'dark' : 'light');
+        const html = document.documentElement;
+        html.classList.toggle('dark', theme === 'dark');
+        html.classList.toggle('light', theme === 'light');
+        html.style.colorScheme = theme;
+      })();
+    </script>
+    <!-- Basic Open Graph -->
+    <meta property="og:title" content="LiveSurgery — OR Video Workflow PoC" />
+    <meta property="og:description" content="Prototype UI for managing multi-source OR video workflows with modular panels and role-based views." />
+    <meta property="og:url" content="https://livesurgery.vercel.app/" />
+    <meta property="og:type" content="website" />
+
+    <!-- Preview image -->
+    <meta property="og:image" content="https://livesurgery.vercel.app/og-livesurgery.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Optional but nice -->
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <div id="root"></div>

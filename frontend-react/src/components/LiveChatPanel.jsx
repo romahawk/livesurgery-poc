@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { MessageSquare, X, SendHorizontal } from "lucide-react";
 
-/** Small trigger button (now in brand teal) */
+/** Small trigger button (brand teal, works in both themes) */
 export function LiveChatButton({ onClick, className = "" }) {
   return (
     <button
@@ -34,16 +34,16 @@ export default function LiveChatPanel({ role, messages, onSendMessage, onClose }
   };
 
   return (
-    <div className="fixed top-0 right-0 w-80 h-full bg-white shadow-lg p-4 border-l z-50">
+    <div className="fixed top-0 right-0 w-80 h-full theme-panel p-4 border-l border-default z-50">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold inline-flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-[#15B8A6]" aria-hidden />
+        <h2 className="text-lg font-semibold inline-flex items-center gap-2 text-default">
+          <MessageSquare className="h-5 w-5 text-[var(--ls-teal,#15B8A6)]" aria-hidden />
           <span>Live Chat</span>
         </h2>
         <button
           onClick={onClose}
-          className="text-slate-500 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6] rounded"
+          className="text-subtle hover:opacity-90 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
           aria-label="Close chat panel"
           title="Close"
         >
@@ -60,13 +60,14 @@ export default function LiveChatPanel({ role, messages, onSendMessage, onClose }
               key={idx}
               className={[
                 "p-2 rounded border",
-                mine
-                  ? "bg-[#CFF4EC] border-[#15B8A6]/30"
-                  : "bg-slate-100 border-slate-200",
+                mine ? "border-[var(--ls-teal,#15B8A6)]/30" : "border-default",
               ].join(" ")}
+              style={{
+                background: mine ? "var(--elev)" : "var(--panel)",
+              }}
             >
-              <strong className="block text-[11px] text-slate-600">{msg.sender}</strong>
-              <span className="text-sm">{msg.text}</span>
+              <strong className="block text-[11px] text-subtle">{msg.sender}</strong>
+              <span className="text-sm text-default">{msg.text}</span>
             </div>
           );
         })}
@@ -77,7 +78,7 @@ export default function LiveChatPanel({ role, messages, onSendMessage, onClose }
         <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
           <input
             type="text"
-            className="flex-1 border rounded px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#15B8A6]"
+            className="searchbar flex-1 rounded px-2 py-1"
             placeholder="Type a message..."
             value={input}
             onChange={(e) => setInput(e.target.value)}

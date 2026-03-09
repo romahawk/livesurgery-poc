@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   Play,
   LayoutDashboard,
-  User,
   MessageSquare,
   Archive,
   BarChart3,
@@ -11,36 +10,12 @@ import {
 } from "lucide-react";
 
 const STEPS = [
-  {
-    title: "Start a session",
-    desc: "Use Start / Pause / Stop to control the recording. Hotkeys: S, P, X.",
-    Icon: Play,
-  },
-  {
-    title: "Arrange video sources",
-    desc: "Drag sources from the left into the 2×2 grid. Double-click a pane for full screen.",
-    Icon: LayoutDashboard,
-  },
-  {
-    title: "Patient Info & Live Chat",
-    desc: "Open side panels to capture patient details and talk to the team. Hotkeys: I (Info), C (Chat).",
-    Icon: MessageSquare,
-  },
-  {
-    title: "Archive your work",
-    desc: "Review past sessions and attachments in Archive.",
-    Icon: Archive,
-  },
-  {
-    title: "Analytics",
-    desc: "See trends for time-in-view, latency, and engagement in Analytics.",
-    Icon: BarChart3,
-  },
-  {
-    title: "Shortcuts",
-    desc: "S Start · P Pause · X Stop · I Patient Info · C Chat",
-    Icon: Keyboard,
-  },
+  { title: "Start a session", desc: "Use Start / Pause / Stop to control the recording. Hotkeys: S, P, X.", Icon: Play },
+  { title: "Arrange video sources", desc: "Drag sources from the left into the 2×2 grid. Double-click a pane for full screen.", Icon: LayoutDashboard },
+  { title: "Patient Info & Live Chat", desc: "Open side panels to capture patient details and talk to the team. Hotkeys: I (Info), C (Chat).", Icon: MessageSquare },
+  { title: "Archive your work", desc: "Review past sessions and attachments in Archive.", Icon: Archive },
+  { title: "Analytics", desc: "See trends for time-in-view, latency, and engagement in Analytics.", Icon: BarChart3 },
+  { title: "Shortcuts", desc: "S Start · P Pause · X Stop · I Patient Info · C Chat", Icon: Keyboard },
 ];
 
 export default function OnboardingModal({ onClose }) {
@@ -62,17 +37,14 @@ export default function OnboardingModal({ onClose }) {
   return (
     <div className="fixed inset-0 z-[60]">
       {/* backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={finish}
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 bg-black/40" onClick={finish} aria-hidden="true" />
+
       {/* card */}
       <div className="absolute inset-0 grid place-items-center px-4">
-        <div className="w-full max-w-lg rounded-2xl border bg-white p-5 shadow-xl relative">
+        <div className="w-full max-w-lg theme-panel p-5 shadow-xl relative">
           <button
             onClick={finish}
-            className="absolute right-3 top-3 text-slate-500 hover:text-slate-700 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
+            className="absolute right-3 top-3 text-subtle hover:opacity-90 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
             aria-label="Close"
             title="Close"
           >
@@ -84,11 +56,11 @@ export default function OnboardingModal({ onClose }) {
               className="grid place-items-center rounded-lg border p-2"
               style={{ background: "var(--ls-mint,#CFF4EC)", borderColor: "var(--ls-teal,#15B8A6)", color: "var(--ls-teal,#15B8A6)" }}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-5 w-5" aria-hidden />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-              <p className="text-sm text-slate-600">{desc}</p>
+              <h2 className="text-lg font-semibold text-default">{title}</h2>
+              <p className="text-sm text-subtle">{desc}</p>
             </div>
           </div>
 
@@ -97,7 +69,7 @@ export default function OnboardingModal({ onClose }) {
             {Array.from({ length: total }).map((_, i) => (
               <span
                 key={i}
-                className={`h-2 rounded-full transition-all ${i === step ? "w-6 bg-[var(--ls-teal,#15B8A6)]" : "w-2 bg-slate-300"}`}
+                className={`h-2 rounded-full transition-all ${i === step ? "w-6 bg-[var(--ls-teal,#15B8A6)]" : "w-2 bg-[var(--border)]"}`}
               />
             ))}
           </div>
@@ -107,7 +79,7 @@ export default function OnboardingModal({ onClose }) {
             <button
               type="button"
               onClick={finish}
-              className="text-sm text-slate-600 hover:text-slate-800"
+              className="text-sm text-subtle hover:opacity-90"
             >
               Skip
             </button>
@@ -116,7 +88,7 @@ export default function OnboardingModal({ onClose }) {
                 type="button"
                 onClick={() => setStep((s) => Math.max(0, s - 1))}
                 disabled={step === 0}
-                className="rounded-md border px-3 py-1 text-sm disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
+                className="rounded-md border border-default px-3 py-1 text-sm text-default disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
               >
                 Back
               </button>

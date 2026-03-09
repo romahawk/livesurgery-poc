@@ -27,7 +27,7 @@ import {
   kpis,
 } from "../data/analyticsMock";
 
-/* ---------- Palette (ClinicalTrust light) ---------- */
+/* ---------- Palette ---------- */
 const COLORS = {
   teal: "#15B8A6",
   tealLight: "#8FE7D8",
@@ -46,23 +46,24 @@ const SOURCE_COLORS = {
   PTZ: COLORS.violet,
 };
 
-const axisStyle = { fontSize: 12, fill: "#475569" };
-const gridStyle = { stroke: "#E2E8F0", strokeDasharray: "4 4" };
+const axisStyle = { fontSize: 12, fill: "#94A3B8" };      // better on dark
+const gridStyle = { stroke: "#1F2937", strokeDasharray: "4 4" }; // softer grid in dark
 const tooltipStyle = {
-  background: "#fff",
-  border: "1px solid #E2E8F0",
+  background: "#0f172a",        // dark panel
+  color: "#e5e7eb",
+  border: "1px solid #334155",
   borderRadius: 8,
-  boxShadow: "0 4px 24px rgba(2,8,23,0.08)",
+  boxShadow: "0 4px 24px rgba(2,8,23,0.45)",
   fontSize: 12,
 };
 
 /* ---------- Small UI bits ---------- */
 function Card({ title, icon: Icon, right, children }) {
   return (
-    <section className="rounded-xl border bg-white p-4">
+    <section className="theme-panel p-4">
       <div className="mb-3 flex items-center justify-between">
-        <div className="text-sm font-semibold text-slate-700 inline-flex items-center gap-2">
-          {Icon && <Icon className="h-4 w-4 text-slate-500" aria-hidden />}
+        <div className="text-sm font-semibold inline-flex items-center gap-2 text-default">
+          {Icon && <Icon className="h-4 w-4 text-subtle" aria-hidden />}
           <span>{title}</span>
         </div>
         {right}
@@ -74,7 +75,7 @@ function Card({ title, icon: Icon, right, children }) {
 
 function KpiCard({ icon: Icon, label, value, sub }) {
   return (
-    <div className="rounded-xl border bg-white p-4 flex items-center gap-3">
+    <div className="theme-panel p-4 flex items-center gap-3">
       <div
         className="rounded-lg border p-2"
         style={{ background: COLORS.mint, borderColor: COLORS.teal, color: COLORS.teal }}
@@ -82,9 +83,9 @@ function KpiCard({ icon: Icon, label, value, sub }) {
         <Icon className="h-5 w-5" aria-hidden />
       </div>
       <div>
-        <div className="text-xs text-slate-500">{label}</div>
-        <div className="text-xl font-semibold text-slate-900">{value}</div>
-        {sub && <div className="text-xs text-slate-500">{sub}</div>}
+        <div className="text-xs text-subtle">{label}</div>
+        <div className="text-xl font-semibold text-default">{value}</div>
+        {sub && <div className="text-xs text-subtle">{sub}</div>}
       </div>
     </div>
   );
@@ -156,14 +157,7 @@ export default function AnalyticsTab() {
               <Tooltip contentStyle={tooltipStyle} />
               <Legend />
               {Object.keys(SOURCE_COLORS).map((key) => (
-                <Bar
-                  key={key}
-                  dataKey={key}
-                  stackId="tiv"
-                  fill={SOURCE_COLORS[key]}
-                  name={key}
-                  radius={[6, 6, 0, 0]}
-                />
+                <Bar key={key} dataKey={key} stackId="tiv" fill={SOURCE_COLORS[key]} name={key} radius={[6, 6, 0, 0]} />
               ))}
             </BarChart>
           </ResponsiveContainer>
@@ -266,17 +260,17 @@ export default function AnalyticsTab() {
       <Card title="Errors & Warnings" icon={AlertTriangle}>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
-            <thead className="bg-slate-50">
-              <tr className="[&>th]:px-3 [&>th]:py-2 text-left text-slate-600">
+            <thead>
+              <tr className="[&>th]:px-3 [&>th]:py-2 text-left text-default">
                 <th>Time</th>
                 <th>Type</th>
                 <th>Source</th>
                 <th>Count</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody>
               {errorsTable.map((e, i) => (
-                <tr key={i} className="hover:bg-slate-50">
+                <tr key={i}>
                   <td className="px-3 py-2">{e.ts}</td>
                   <td className="px-3 py-2">{e.type}</td>
                   <td className="px-3 py-2">{e.source}</td>
