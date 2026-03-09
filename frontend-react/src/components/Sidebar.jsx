@@ -17,18 +17,27 @@ const SOURCE_ICON = {
 };
 
 const STATUS_DOT = {
-  live: "bg-emerald-400",
+  active:  "bg-teal-400",
+  live:    "bg-emerald-400",
   offline: "bg-red-500",
-  muted: "bg-amber-400",
+  muted:   "bg-amber-400",
 };
 
 const STATUS_PILL = {
+  active:  "border-teal-400   text-teal-700   dark:text-teal-300   bg-teal-50   dark:bg-teal-900/30",
   live:    "border-emerald-500 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30",
   offline: "border-slate-400   text-slate-500   dark:text-slate-400   bg-slate-50   dark:bg-slate-800/40",
   muted:   "border-amber-500   text-amber-600   dark:text-amber-400   bg-amber-50   dark:bg-amber-900/30",
 };
 
-function DraggableSource({ source, selected, onSelect }) {
+const STATUS_LABEL = {
+  active:  "in grid",
+  live:    "live",
+  offline: "offline",
+  muted:   "muted",
+};
+
+function DraggableSource({ source, selected, onSelect, inGrid }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: `src-${source.id}`,
@@ -36,8 +45,10 @@ function DraggableSource({ source, selected, onSelect }) {
     });
 
   const Icon = SOURCE_ICON[source.id] ?? Camera;
-  const dotClass = STATUS_DOT[source.status] ?? STATUS_DOT.offline;
-  const pillClass = STATUS_PILL[source.status] ?? STATUS_PILL.offline;
+  const effectiveStatus = inGrid ? "active" : source.status;
+  const dotClass = STATUS_DOT[effectiveStatus] ?? STATUS_DOT.offline;
+  const pillClass = STATUS_PILL[effectiveStatus] ?? STATUS_PILL.offline;
+  const pillLabel = STATUS_LABEL[effectiveStatus] ?? effectiveStatus;
 
   const style = transform
     ? {
@@ -91,13 +102,13 @@ function DraggableSource({ source, selected, onSelect }) {
       <span
         className={`hidden lg:inline-flex text-[10px] px-2 py-0.5 rounded-full border ${pillClass}`}
       >
-        {source.status}
+        {pillLabel}
       </span>
     </button>
   );
 }
 
-export default function Sidebar({ role, selectedSource, onSelectSource }) {
+export default function Sidebar({ role, selectedSource, onSelectSource, gridSources = [] }) {
   const sources = [
     { id: "endoscope", label: "Endoscope", src: "endoscope.mp4", status: "live" },
     { id: "microscope", label: "Microscope", src: "microscope.mp4", status: "offline" },
@@ -131,6 +142,7 @@ export default function Sidebar({ role, selectedSource, onSelectSource }) {
               source={s}
               selected={selectedSource === s.src}
               onSelect={onSelectSource}
+              inGrid={gridSources.includes(s.src)}
             />
           ))}
         </div>
