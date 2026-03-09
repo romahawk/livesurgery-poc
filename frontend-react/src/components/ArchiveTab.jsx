@@ -45,22 +45,43 @@ const SOURCE_ICON = {
   "Monitor Capture": Monitor,
 };
 
-export default function ArchiveTab() {
+// Coerce Firestore Timestamp, Date, number, or ISO string → ISO string.
+const toISO = (val) => {
+  if (!val) return null;
+  if (typeof val === "string") return val;
+  if (typeof val.toDate === "function") return val.toDate().toISOString(); // Firestore Timestamp
+  if (val instanceof Date) return val.toISOString();
+  if (typeof val === "number") return new Date(val).toISOString();
+  return null;
+};
+
+const normalizeSession = (raw) => ({
+  id: raw.id,
+  surgeon: raw.surgeon || raw.createdBy || "N/A",
+  procedure: raw.procedure || raw.title || "Untitled Session",
+  date: toISO(raw.date) ?? toISO(raw.updatedAt) ?? toISO(raw.createdAt) ?? new Date().toISOString(),
+  durationSec: Number.isFinite(raw.durationSec) ? raw.durationSec : 0,
+  sizeMB: Number.isFinite(raw.sizeMB) ? raw.sizeMB : 0,
+  sources: Array.isArray(raw.sources) ? raw.sources : [],
+});
+
+export default function ArchiveTab({ sessions = archiveSessions, loading = false, error = null }) {
   const [query, setQuery] = useState("");
   const [surgeon, setSurgeon] = useState("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
+  const [actionNotice, setActionNotice] = useState(null);
   const pageSize = 8;
 
   const surgeons = useMemo(
-    () => ["all", ...Array.from(new Set(archiveSessions.map((s) => s.surgeon)))],
-    []
+    () => ["all", ...Array.from(new Set(sessions.map((s) => normalizeSession(s).surgeon)))],
+    [sessions]
   );
 
   // filters
   const filtered = useMemo(() => {
-    let list = [...archiveSessions].sort((a, b) =>
+    let list = sessions.map(normalizeSession).sort((a, b) =>
       b.date.localeCompare(a.date)
     );
     if (query.trim()) {
@@ -83,7 +104,7 @@ export default function ArchiveTab() {
           new Date(to).getTime() + 86400000 - 1
       );
     return list;
-  }, [query, surgeon, from, to]);
+  }, [query, surgeon, from, to, sessions]);
 
   // kpis from filtered
   const kpis = useMemo(() => {
@@ -108,11 +129,15 @@ export default function ArchiveTab() {
     setPage(1);
   };
 
-  // actions (mock)
-  const onPlay = (row) => alert(`Play ${row.id}`);
-  const onDownload = (row) => alert(`Download ${row.id}`);
-  const onDetails = (row) => alert(`Details for ${row.id}`);
-  const onAnalytics = (row) => alert(`Open analytics for ${row.id}`);
+  // actions (demo — full playback/export coming in v1.0)
+  const showNotice = (msg) => {
+    setActionNotice(msg);
+    setTimeout(() => setActionNotice(null), 3000);
+  };
+  const onPlay = (row) => showNotice(`Playback for "${row.procedure}" — coming in v1.0`);
+  const onDownload = (row) => showNotice(`Export for "${row.procedure}" — coming in v1.0`);
+  const onDetails = (row) => showNotice(`Detailed report for "${row.procedure}" — coming in v1.0`);
+  const onAnalytics = (row) => showNotice(`Per-session analytics for "${row.procedure}" — coming in v1.0`);
 
   return (
     <div className="p-3 sm:p-4 space-y-4">
@@ -122,7 +147,14 @@ export default function ArchiveTab() {
           <Archive className="h-5 w-5" aria-hidden />
           <span>Session Archive</span>
         </h2>
+        {loading && <span className="text-xs text-subtle">Loading...</span>}
       </div>
+      {error && <div className="text-sm text-red-500">{error}</div>}
+      {actionNotice && (
+        <div className="text-sm px-3 py-2 rounded-lg border border-teal-500/40 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300">
+          {actionNotice}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="theme-panel p-3 sm:p-4 space-y-3">

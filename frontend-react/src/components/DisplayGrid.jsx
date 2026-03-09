@@ -1,13 +1,22 @@
 import React, { useState } from "react";
-import { LayoutDashboard, X, Maximize2 } from "lucide-react";
+import { LayoutDashboard, X, Maximize2, VideoOff } from "lucide-react";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+
+const SRC_LABEL = {
+  "endoscope.mp4": "Endoscope",
+  "microscope.mp4": "Microscope",
+  "ptz.mp4": "PTZ Camera",
+  "vital_signs.mp4": "Monitor Capture",
+};
 
 export default function DisplayGrid({
   gridSources = [null, null, null, null],
   setGridSources,
   selectedSource,
   onPanelClick,
+  readOnly = false,
+  layoutMode = "2x2",
 }) {
   const [fitMode, setFitMode] = useState([
     "contain",
@@ -15,6 +24,9 @@ export default function DisplayGrid({
     "contain",
     "contain",
   ]);
+  // Track which panels have a broken video: { [panelIndex]: srcFilename }
+  // Automatically resets when a different source is placed in the same slot.
+  const [videoErrors, setVideoErrors] = useState({});
 
   const handleRemove = (index) => {
     setGridSources?.((prev) => {
@@ -52,7 +64,7 @@ export default function DisplayGrid({
     } = useDraggable({
       id: `panel-drag-${index}`,
       data: { panelIndex: index },
-      disabled: !src, // only draggable when filled
+      disabled: readOnly || !src, // only draggable when filled
     });
 
     const style = transform
@@ -68,6 +80,7 @@ export default function DisplayGrid({
     };
 
     const handlePanelClick = () => {
+      if (readOnly) return;
       if (!src && selectedSource && onPanelClick) {
         onPanelClick(index);
       }
@@ -83,31 +96,36 @@ export default function DisplayGrid({
         onDoubleClick={(e) => src && toggleFullscreen(e.currentTarget)}
         className={`
           relative rounded-xl flex items-center justify-center border-2 border-dashed transition theme-panel
-          ${isOver ? "border-blue-400 bg-blue-50" : ""}
-          ${src ? "cursor-move" : selectedSource ? "cursor-pointer" : "cursor-default"}
+          ${isOver ? "border-blue-400 bg-blue-500/10 dark:bg-blue-400/15" : ""}
+          ${src && !readOnly ? "cursor-move" : !src && selectedSource && !readOnly ? "cursor-pointer" : "cursor-default"}
           min-h-[120px] sm:min-h-[160px] lg:min-h-0 lg:h-full
         `}
       >
         {src ? (
           <>
-            <video
-              key={src}
-              src={`/videos/${src}`}
-              className="w-full h-full rounded-xl"
-              style={{ objectFit: fitMode[index] }}
-              controls
-              autoPlay
-              muted
-              playsInline
-              loop
-              onError={(e) =>
-                console.warn(
-                  "Video failed:",
-                  `/videos/${src}`,
-                  e.currentTarget?.error
-                )
-              }
-            />
+            {/* hasError: true when the current src failed to load */}
+            {videoErrors[index] === src ? (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-2 rounded-xl text-subtle pointer-events-none select-none">
+                <VideoOff className="h-8 w-8 opacity-40" aria-hidden />
+                <span className="text-xs">{SRC_LABEL[src] ?? src}</span>
+                <span className="text-[10px] opacity-60">Feed unavailable</span>
+              </div>
+            ) : (
+              <video
+                key={src}
+                src={`/videos/${src}`}
+                className="w-full h-full rounded-xl"
+                style={{ objectFit: fitMode[index] }}
+                controls
+                autoPlay
+                muted
+                playsInline
+                loop
+                onError={() =>
+                  setVideoErrors((prev) => ({ ...prev, [index]: src }))
+                }
+              />
+            )}
 
             {/* Toolbar */}
             <div className="absolute top-2 right-2 flex gap-1">
@@ -129,14 +147,23 @@ export default function DisplayGrid({
               >
                 <Maximize2 className="h-3.5 w-3.5" />
               </button>
-              <button
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => handleRemove(index)}
-                className="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs border-default border text-red-600 bg-surface hover:bg-red-50"
-                title="Remove source"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
+              {!readOnly && (
+                <button
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => handleRemove(index)}
+                  className="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs border-default border text-red-500 bg-surface hover:bg-red-500/10"
+                  title="Remove source"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Source label chip */}
+            <div className="absolute bottom-2 left-2 pointer-events-none">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/55 text-white backdrop-blur-sm">
+                {SRC_LABEL[src] ?? src}
+              </span>
             </div>
           </>
         ) : (
@@ -153,10 +180,44 @@ export default function DisplayGrid({
     );
   };
 
+  const visiblePanelIndexes = layoutMode === "1x1" ? [0] : [0, 1, 2, 3];
+
+  const gridClass =
+    layoutMode === "1x1"
+      ? "grid grid-cols-1 gap-3 sm:gap-4 h-auto lg:h-full lg:min-h-0 lg:grid-rows-1"
+      : layoutMode === "3x1"
+        ? "grid grid-cols-1 gap-3 sm:gap-4 h-auto lg:h-full lg:min-h-0 lg:grid-cols-2 lg:grid-rows-3"
+        : layoutMode === "1x3"
+          ? "grid grid-cols-1 gap-3 sm:gap-4 h-auto lg:h-full lg:min-h-0 lg:grid-cols-2 lg:grid-rows-3"
+          : "grid grid-cols-2 gap-3 sm:gap-4 h-auto lg:h-full lg:min-h-0 lg:grid-rows-2";
+
+  const getPanelDesktopPlacement = (index) => {
+    if (layoutMode === "3x1") {
+      // 3x left (stacked) | 1x right (full height)
+      if (index === 0) return "lg:col-start-1 lg:row-start-1";
+      if (index === 1) return "lg:col-start-1 lg:row-start-2";
+      if (index === 2) return "lg:col-start-1 lg:row-start-3";
+      if (index === 3) return "lg:col-start-2 lg:row-start-1 lg:row-span-3";
+    }
+    if (layoutMode === "1x3") {
+      // 1x left (full height) | 3x right (stacked)
+      if (index === 0) return "lg:col-start-1 lg:row-start-1 lg:row-span-3";
+      if (index === 1) return "lg:col-start-2 lg:row-start-1";
+      if (index === 2) return "lg:col-start-2 lg:row-start-2";
+      if (index === 3) return "lg:col-start-2 lg:row-start-3";
+    }
+    if (layoutMode === "1x1") {
+      return "lg:row-start-1 lg:col-start-1";
+    }
+    return "lg:h-full";
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 h-auto lg:h-full lg:min-h-0 lg:[grid-template-rows:1fr_1fr]">
-      {gridSources.map((src, index) => (
-        <Panel key={index} src={src} index={index} />
+    <div className={gridClass}>
+      {visiblePanelIndexes.map((index) => (
+        <div key={index} className={`h-full min-h-0 ${getPanelDesktopPlacement(index)}`}>
+          <Panel src={gridSources[index]} index={index} />
+        </div>
       ))}
     </div>
   );

@@ -26,36 +26,7 @@ import {
   errorsTable,
   kpis,
 } from "../data/analyticsMock";
-
-/* ---------- Palette ---------- */
-const COLORS = {
-  teal: "#15B8A6",
-  tealLight: "#8FE7D8",
-  navy: "#0E2A47",
-  mint: "#CFF4EC",
-  blue: "#60A5FA",
-  cyan: "#38BDF8",
-  violet: "#A78BFA",
-  slate: "#94A3B8",
-};
-
-const SOURCE_COLORS = {
-  Endoscope: COLORS.teal,
-  Microscope: COLORS.blue,
-  Monitor: COLORS.cyan,
-  PTZ: COLORS.violet,
-};
-
-const axisStyle = { fontSize: 12, fill: "#94A3B8" };      // better on dark
-const gridStyle = { stroke: "#1F2937", strokeDasharray: "4 4" }; // softer grid in dark
-const tooltipStyle = {
-  background: "#0f172a",        // dark panel
-  color: "#e5e7eb",
-  border: "1px solid #334155",
-  borderRadius: 8,
-  boxShadow: "0 4px 24px rgba(2,8,23,0.45)",
-  fontSize: 12,
-};
+import { COLORS, SOURCE_COLORS, axisStyle, gridStyle, tooltipStyle } from "../data/analyticsTheme";
 
 /* ---------- Small UI bits ---------- */
 function Card({ title, icon: Icon, right, children }) {

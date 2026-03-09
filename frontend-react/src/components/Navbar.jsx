@@ -11,7 +11,13 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { useTheme } from "../theme/ThemeProvider.jsx";
+import { useTheme } from "../theme/useTheme.js";
+
+const ALL_TABS = [
+  { id: "Live", label: "Live", icon: PlayCircle },
+  { id: "Archive", label: "Archive", icon: ArchiveIcon },
+  { id: "Analytics", label: "Analytics", icon: BarChart3 },
+];
 
 /** Brand logo */
 function BrandLogo({ size = 40 }) {
@@ -62,14 +68,8 @@ export default function Navbar({
   const { theme, toggle } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const allTabs = [
-    { id: "Live", label: "Live", icon: PlayCircle },
-    { id: "Archive", label: "Archive", icon: ArchiveIcon },
-    { id: "Analytics", label: "Analytics", icon: BarChart3 },
-  ];
-
   const tabs = useMemo(
-    () => (role === "viewer" ? allTabs.filter((t) => t.id === "Live") : allTabs),
+    () => (role === "viewer" ? ALL_TABS.filter((t) => t.id === "Live") : ALL_TABS),
     [role]
   );
 

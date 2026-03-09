@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { User, X } from "lucide-react";
+import { User, X, AlertTriangle } from "lucide-react";
 
 export function PatientInfoButton({ onClick, className = "", hasUnsaved = false }) {
   return (
@@ -21,12 +21,17 @@ export function PatientInfoButton({ onClick, className = "", hasUnsaved = false 
 export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose }) {
   const [localInfo, setLocalInfo] = useState(patientInfo);
   const [dirty, setDirty] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   useEffect(() => {
-    const onEsc = (e) => e.key === "Escape" && onClose?.();
+    const onEsc = (e) => {
+      if (e.key !== "Escape") return;
+      if (dirty) setConfirmDiscard(true);
+      else onClose?.();
+    };
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
-  }, [onClose]);
+  }, [dirty, onClose]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -49,7 +54,7 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
           {dirty && <span className="ml-2 h-2 w-2 rounded-full bg-amber-400" title="Unsaved changes" />}
         </h2>
         <button
-          onClick={() => (dirty && !confirm("Discard unsaved changes?")) ? null : onClose?.()}
+          onClick={() => dirty ? setConfirmDiscard(true) : onClose?.()}
           className="text-subtle hover:opacity-90 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ls-teal,#15B8A6)]"
           aria-label="Close patient info (Esc)"
           title="Close (Esc)"
@@ -57,6 +62,29 @@ export default function PatientInfoPanel({ role, patientInfo, onUpdate, onClose 
           <X className="h-5 w-5" />
         </button>
       </div>
+
+      {confirmDiscard && (
+        <div className="mb-4 rounded-lg border border-amber-400/50 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm">
+          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-medium mb-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
+            Discard unsaved changes?
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => setConfirmDiscard(false)}
+              className="px-3 py-1 rounded border border-default text-xs text-default hover:opacity-80"
+            >
+              Keep editing
+            </button>
+            <button
+              onClick={() => { setConfirmDiscard(false); onClose?.(); }}
+              className="px-3 py-1 rounded bg-amber-500 text-white text-xs hover:bg-amber-600"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
 
       {role === "surgeon" ? (
         <div className="space-y-3">

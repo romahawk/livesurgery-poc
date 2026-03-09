@@ -17,18 +17,27 @@ const SOURCE_ICON = {
 };
 
 const STATUS_DOT = {
-  live: "bg-emerald-400",
+  active:  "bg-teal-400",
+  live:    "bg-emerald-400",
   offline: "bg-red-500",
-  muted: "bg-amber-400",
+  muted:   "bg-amber-400",
 };
 
 const STATUS_PILL = {
-  live: "border-green-600 text-green-700 bg-green-50",
-  offline: "border-gray-300 text-gray-500 bg-gray-50",
-  muted: "border-amber-500 text-amber-600 bg-amber-50",
+  active:  "border-teal-400   text-teal-700   dark:text-teal-300   bg-teal-50   dark:bg-teal-900/30",
+  live:    "border-emerald-500 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30",
+  offline: "border-slate-400   text-slate-500   dark:text-slate-400   bg-slate-50   dark:bg-slate-800/40",
+  muted:   "border-amber-500   text-amber-600   dark:text-amber-400   bg-amber-50   dark:bg-amber-900/30",
 };
 
-function DraggableSource({ source, selected, onSelect }) {
+const STATUS_LABEL = {
+  active:  "in grid",
+  live:    "live",
+  offline: "offline",
+  muted:   "muted",
+};
+
+function DraggableSource({ source, selected, onSelect, inGrid }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({
       id: `src-${source.id}`,
@@ -36,8 +45,10 @@ function DraggableSource({ source, selected, onSelect }) {
     });
 
   const Icon = SOURCE_ICON[source.id] ?? Camera;
-  const dotClass = STATUS_DOT[source.status] ?? STATUS_DOT.offline;
-  const pillClass = STATUS_PILL[source.status] ?? STATUS_PILL.offline;
+  const effectiveStatus = inGrid ? "active" : source.status;
+  const dotClass = STATUS_DOT[effectiveStatus] ?? STATUS_DOT.offline;
+  const pillClass = STATUS_PILL[effectiveStatus] ?? STATUS_PILL.offline;
+  const pillLabel = STATUS_LABEL[effectiveStatus] ?? effectiveStatus;
 
   const style = transform
     ? {
@@ -52,7 +63,7 @@ function DraggableSource({ source, selected, onSelect }) {
       ref={setNodeRef}
       style={style}
       onClick={() => onSelect?.(source.src)}
-      className={`source-item flex-1 flex items-center gap-2 rounded-md px-2 py-1 lg:px-3 lg:py-2 cursor-pointer ${
+      className={`source-item flex-1 flex items-center gap-2 rounded-md px-2 py-1 lg:px-2 lg:py-1.5 cursor-pointer ${
         selected ? "ring-2 ring-teal-400 ring-offset-2 ring-offset-slate-900" : ""
       }`}
       title="Click to select, drag from handle to a panel"
@@ -91,13 +102,13 @@ function DraggableSource({ source, selected, onSelect }) {
       <span
         className={`hidden lg:inline-flex text-[10px] px-2 py-0.5 rounded-full border ${pillClass}`}
       >
-        {source.status}
+        {pillLabel}
       </span>
     </button>
   );
 }
 
-export default function Sidebar({ role, selectedSource, onSelectSource }) {
+export default function Sidebar({ role, selectedSource, onSelectSource, gridSources = [] }) {
   const sources = [
     { id: "endoscope", label: "Endoscope", src: "endoscope.mp4", status: "live" },
     { id: "microscope", label: "Microscope", src: "microscope.mp4", status: "offline" },
@@ -111,7 +122,7 @@ export default function Sidebar({ role, selectedSource, onSelectSource }) {
   ];
 
   return (
-    <aside className="sources-panel w-full rounded-xl px-2 py-2 lg:px-3 lg:py-3 flex flex-col gap-2">
+    <aside className="sources-panel w-full rounded-xl px-2 py-2 lg:px-2 lg:py-2 flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ArrowLeftRight className="h-5 w-5 text-default" aria-hidden />
@@ -131,6 +142,7 @@ export default function Sidebar({ role, selectedSource, onSelectSource }) {
               source={s}
               selected={selectedSource === s.src}
               onSelect={onSelectSource}
+              inGrid={gridSources.includes(s.src)}
             />
           ))}
         </div>
