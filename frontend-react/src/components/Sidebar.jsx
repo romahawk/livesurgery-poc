@@ -122,7 +122,10 @@ export default function Sidebar({ role, selectedSource, onSelectSource, gridSour
   ];
 
   return (
-    <aside className="sources-panel w-full rounded-xl px-2 py-2 lg:px-2 lg:py-2 flex flex-col gap-1.5">
+    <aside
+      data-tour="sources-panel"
+      className="sources-panel w-full rounded-xl px-2 py-2 lg:px-2 lg:py-2 flex flex-col gap-1.5"
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ArrowLeftRight className="h-5 w-5 text-default" aria-hidden />

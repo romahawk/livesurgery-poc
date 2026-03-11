@@ -180,15 +180,24 @@ export default function App() {
 
   useEffect(() => {
     try {
+      window.startTour = () => setShowOnboarding(true);
       const seen = localStorage.getItem("ls_onboarded") === "1";
+      const params = new URLSearchParams(window.location.search);
+      const forced = params.get("tour") === "1";
       setHasOnboarded(seen);
-      if (!seen) {
+      if (forced || !seen) {
         const t = setTimeout(() => setShowOnboarding(true), 400);
-        return () => clearTimeout(t);
+        return () => {
+          clearTimeout(t);
+          delete window.startTour;
+        };
       }
     } catch {
       // ignore
     }
+    return () => {
+      delete window.startTour;
+    };
   }, []);
 
   useEffect(() => {
@@ -707,7 +716,7 @@ export default function App() {
         showGuidePulse={!hasOnboarded}
       />
 
-      <div className="fixed right-3 bottom-3 z-30 flex flex-col gap-2">
+      <div data-tour="quick-actions" className="fixed right-3 bottom-3 z-30 flex flex-col gap-2">
         <button
           type="button"
           onClick={() => setShowShortcutsHelp((v) => !v)}
@@ -842,7 +851,7 @@ export default function App() {
           <div className="hidden lg:flex flex-col gap-2 h-full min-h-0 overflow-hidden">
             {currentTab === "Live" && (
               <>
-                <div className="theme-panel p-1.5 sm:p-2 border-default border">
+                <div data-tour="live-status" className="theme-panel p-1.5 sm:p-2 border-default border">
                   <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs">
                     {/* Session status badge */}
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border font-medium ${sessionStatus === "running" ? "text-emerald-400 border-emerald-500/50" : "text-amber-300 border-amber-500/40"}`}>
@@ -892,7 +901,7 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="theme-panel p-2 border-default border">
+                <div data-tour="layout-tools" className="theme-panel p-2 border-default border">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs text-subtle">Session</span>
                     <select
@@ -997,7 +1006,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="theme-panel p-2 sm:p-2.5 shadow flex flex-col flex-1 min-h-0 mt-2">
+                <div data-tour="live-grid" className="theme-panel p-2 sm:p-2.5 shadow flex flex-col flex-1 min-h-0 mt-2">
                   <div className="ls-live-grid-shell">
                     <DisplayGrid
                       gridSources={gridSources}
@@ -1013,7 +1022,7 @@ export default function App() {
             )}
 
             {currentTab === "Archive" && (
-              <div className="theme-panel p-3 sm:p-4 shadow flex-1 min-h-0">
+              <div data-tour="archive-panel" className="theme-panel p-3 sm:p-4 shadow flex-1 min-h-0">
                 <ArchiveTab
                   sessions={sessions}
                   loading={sessionsLoading}
@@ -1023,7 +1032,7 @@ export default function App() {
             )}
 
             {currentTab === "Analytics" && (
-              <div className="theme-panel p-3 sm:p-4 shadow flex-1 min-h-0">
+              <div data-tour="analytics-panel" className="theme-panel p-3 sm:p-4 shadow flex-1 min-h-0">
                 <AnalyticsTab />
               </div>
             )}
@@ -1032,7 +1041,7 @@ export default function App() {
           <div className="flex flex-col lg:hidden gap-4 h-full min-h-[480px]">
             {currentTab === "Live" && (
               <>
-                <div className="theme-panel p-2 sm:p-3 border-default border">
+                <div data-tour="live-status" className="theme-panel p-2 sm:p-3 border-default border">
                   <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs">
                     {/* Session status badge */}
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border font-medium ${sessionStatus === "running" ? "text-emerald-400 border-emerald-500/50" : "text-amber-300 border-amber-500/40"}`}>
@@ -1142,17 +1151,19 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="flex-1 theme-panel p-3 sm:p-4 shadow relative flex flex-col min-h-0">
+                <div data-tour="live-grid" className="flex-1 theme-panel p-3 sm:p-4 shadow relative flex flex-col min-h-0">
                   <div className="mb-3">
-                    <SessionControls
-                      onStart={handleStart}
-                      onPause={handlePause}
-                      onStop={handleStop}
-                      status={sessionStatus}
-                      canControl={canControlSession}
-                      readOnlyReason="Viewer role cannot control the session."
-                      hideActions={!canControlSession}
-                    />
+                    <div data-tour="layout-tools">
+                      <SessionControls
+                        onStart={handleStart}
+                        onPause={handlePause}
+                        onStop={handleStop}
+                        status={sessionStatus}
+                        canControl={canControlSession}
+                        readOnlyReason="Viewer role cannot control the session."
+                        hideActions={!canControlSession}
+                      />
+                    </div>
                   </div>
 
                   <div className="mt-3">
@@ -1170,7 +1181,7 @@ export default function App() {
             )}
 
             {currentTab === "Archive" && (
-              <div className="flex-1 theme-panel p-3 sm:p-4 shadow flex flex-col min-h-0">
+              <div data-tour="archive-panel" className="flex-1 theme-panel p-3 sm:p-4 shadow flex flex-col min-h-0">
                 <ArchiveTab
                   sessions={sessions}
                   loading={sessionsLoading}
@@ -1180,7 +1191,7 @@ export default function App() {
             )}
 
             {currentTab === "Analytics" && (
-              <div className="flex-1 theme-panel p-3 sm:p-4 shadow flex flex-col min-h-0">
+              <div data-tour="analytics-panel" className="flex-1 theme-panel p-3 sm:p-4 shadow flex flex-col min-h-0">
                 <AnalyticsTab />
               </div>
             )}
@@ -1252,7 +1263,12 @@ export default function App() {
       </main>
 
       {showOnboarding && (
-        <OnboardingModal onClose={() => setShowOnboarding(false)} />
+        <OnboardingModal
+          onClose={() => setShowOnboarding(false)}
+          currentTab={currentTab}
+          setCurrentTab={setCurrentTab}
+          role={role}
+        />
       )}
     </div>
   );

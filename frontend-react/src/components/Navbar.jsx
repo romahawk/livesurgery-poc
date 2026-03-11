@@ -120,6 +120,7 @@ export default function Navbar({
         className="guide-pill"
         title="Quick Guide"
         aria-label="Quick Guide"
+        id="tour-guide-button"
       >
         <span className="inline-flex items-center gap-2 text-default">
           <HelpCircle className="h-4 w-4 text-[var(--ls-teal,#15B8A6)]" />
@@ -180,6 +181,7 @@ export default function Navbar({
                 onClick={() => setCurrentTab(id)}
                 aria-current={active ? "page" : undefined}
                 className={`tab-pill ${active ? "is-active" : ""}`}
+                id={`tour-tab-${id.toLowerCase()}`}
               >
                 <Icon className="h-4 w-4" aria-hidden="true" />
                 {label}
@@ -226,6 +228,7 @@ export default function Navbar({
                   className={`tab-pill w-full justify-center ${
                     active ? "is-active" : ""
                   }`}
+                  id={`tour-tab-mobile-${id.toLowerCase()}`}
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
                   {label}
