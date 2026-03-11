@@ -1,232 +1,391 @@
-import React, { useEffect, useState } from "react";
-import {
-  Play,
-  LayoutDashboard,
-  MessageSquare,
-  Archive,
-  BarChart3,
-  Keyboard,
-  X,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { X } from "lucide-react";
 
-const STEPS = [
-  {
-    Icon: Play,
-    title: "Control your session",
-    desc: "Hit Start to begin recording. Pause freezes the clock without stopping — Resume picks right back up. Stop ends and saves the session.",
-    tips: [
-      { kbd: "S", label: "Start / Resume" },
-      { kbd: "P", label: "Pause" },
-      { kbd: "X", label: "Stop" },
-      { label: "Timer survives a page refresh" },
-    ],
-  },
-  {
-    Icon: LayoutDashboard,
-    title: "Place your video feeds",
-    desc: "Click a source in the sidebar to select it, then click any empty panel to place it — or drag from the grip handle directly into the grid. Drag between panels to swap.",
-    tips: [
-      { label: "Endoscope · Microscope · PTZ · Monitor" },
-      { label: "Double-click a panel → fullscreen" },
-      { label: "Fit ↔ Fill toggle per panel" },
-      { label: "2×2 · 1+3 · 3+1 · 1×1 layouts" },
-    ],
-  },
-  {
-    Icon: MessageSquare,
-    title: "Side panels & roles",
-    desc: "Log patient details and message the team from the right-side panels. Surgeons and admins control the session; viewers follow the presenter layout in real time.",
-    tips: [
-      { kbd: "I", label: "Patient info" },
-      { kbd: "C", label: "Live chat" },
-      { label: "Surgeon / Admin — full control" },
-      { label: "Viewer — syncs to presenter" },
-    ],
-  },
-  {
-    Icon: Archive,
-    title: "Review past sessions",
-    desc: "Every completed session lands in Archive. Filter by surgeon, date range, or search by procedure name or session ID.",
-    tips: [
-      { label: "Filter by surgeon & date" },
-      { label: "Search by procedure or ID" },
-      { label: "KPIs: sessions · duration · storage" },
-    ],
-  },
-  {
-    Icon: BarChart3,
-    title: "Analytics at a glance",
-    desc: "Track source time-in-view, stream latency, stall counts, and team engagement across the last 7 days. Hover any chart for per-day detail.",
-    tips: [
-      { label: "Sessions & avg duration" },
-      { label: "Latency · stalls per day" },
-      { label: "Engagement & layout distribution" },
-    ],
-  },
-  {
-    Icon: Keyboard,
-    title: "Keyboard shortcuts",
-    desc: "Navigate the entire platform without touching the mouse. Press ? at any time to reopen this guide.",
-    tips: [
-      { kbd: "S · P · X", label: "Session" },
-      { kbd: "I · C", label: "Panels" },
-      { kbd: "← →", label: "Switch tabs" },
-      { kbd: "?", label: "Reopen guide" },
-    ],
-  },
-];
+const TOUR_KEY = "ls_onboarded";
+const MOBILE_TOUR_QUERY = "(max-width: 768px)";
+const PAD = 10;
 
-const teal = "var(--ls-teal, #15B8A6)";
-const mint = "var(--ls-mint, #CFF4EC)";
+function isVisibleTarget(node) {
+  if (!node) return false;
+  const rect = node.getBoundingClientRect();
+  const styles = window.getComputedStyle(node);
+  return styles.display !== "none" && styles.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+}
 
-export default function OnboardingModal({ onClose }) {
-  const [step, setStep] = useState(0);
-  const total = STEPS.length;
-  const { Icon, title, desc, tips } = STEPS[step];
+function getFocusableElements(container) {
+  if (!container) return [];
 
-  const finish = () => {
-    try { localStorage.setItem("ls_onboarded", "1"); } catch { /* ignore */ }
-    onClose();
-  };
+  return Array.from(
+    container.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  );
+}
 
-  // Keyboard: Esc closes, ← → navigate steps
+function buildSteps(role) {
+  const baseSteps = [
+    {
+      id: "welcome",
+      target: null,
+      title: "Welcome to LiveSurgery",
+      body:
+        "Run, monitor, and review surgical sessions from one workspace. This short tour walks through the controls teams use during live procedures and post-op review.",
+      position: "center",
+    },
+    {
+      id: "live-status",
+      target: '[data-tour="live-status"]',
+      title: "Live session status",
+      body:
+        "Track the current session state, connected participants, sync health, and active layout version here. This is the first place to check before making changes during a procedure.",
+      position: "bottom",
+      tab: "Live",
+    },
+    {
+      id: "layout-tools",
+      target: '[data-tour="layout-tools"]',
+      title: "Session and layout controls",
+      body:
+        "Join a session, create a draft, apply layout presets, and switch grid modes from this control strip. It is optimized for rapid changes while the procedure is in progress.",
+      position: "bottom",
+      tab: "Live",
+    },
+    {
+      id: "sources",
+      target: '[data-tour="sources-panel"]',
+      title: "Source catalog",
+      body:
+        "Select or drag sources like the endoscope, microscope, PTZ camera, and monitor capture into the live grid. Status labels show which feeds are live, muted, or already in use.",
+      position: "bottom",
+      tab: "Live",
+    },
+    {
+      id: "grid",
+      target: '[data-tour="live-grid"]',
+      title: "Live display grid",
+      body:
+        "This is the shared surgical canvas. Place sources into panels, swap them during the case, and sync the layout across participants in real time.",
+      position: "top",
+      tab: "Live",
+    },
+    {
+      id: "utilities",
+      target: '[data-tour="quick-actions"]',
+      title: "Patient info, chat, and shortcuts",
+      body:
+        "The quick actions open patient notes, live chat, and the keyboard shortcut reference. These tools stay accessible without leaving the active procedure view.",
+      position: "left",
+      tab: "Live",
+    },
+  ];
+
+  if (role !== "viewer") {
+    baseSteps.push(
+      {
+        id: "archive",
+        target: '[data-tour="archive-panel"]',
+        title: "Session archive",
+        body:
+          "Review completed procedures, filter by surgeon and date, and inspect recorded sources. Archive is where teams revisit sessions for handoff, teaching, and documentation.",
+        position: "center",
+        tab: "Archive",
+      },
+      {
+        id: "analytics",
+        target: '[data-tour="analytics-panel"]',
+        title: "Operational analytics",
+        body:
+          "Analytics summarizes session volume, source utilization, latency, stalls, and engagement so the team can spot quality trends across recent cases.",
+        position: "center",
+        tab: "Analytics",
+      },
+    );
+  }
+
+  baseSteps.push({
+    id: "finish",
+    target: "#tour-guide-button",
+    title: "Replay this guide anytime",
+    body:
+      "Use the Guide button in the top bar to reopen this walkthrough. On first visit it starts automatically, and you can also force it with the ?tour=1 query parameter.",
+    position: "bottom",
+  });
+
+  return baseSteps;
+}
+
+export default function OnboardingModal({ onClose, currentTab, setCurrentTab, role = "surgeon" }) {
+  const steps = useMemo(() => buildSteps(role), [role]);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [layout, setLayout] = useState({
+    rect: null,
+    tooltipStyle: {},
+    showSpotlight: false,
+  });
+  const tooltipRef = useRef(null);
+  const previousFocusRef = useRef(null);
+
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") { finish(); return; }
-      if (e.key === "ArrowRight") setStep((s) => Math.min(total - 1, s + 1));
-      if (e.key === "ArrowLeft")  setStep((s) => Math.max(0, s - 1));
+    previousFocusRef.current = document.activeElement;
+    const focusables = getFocusableElements(tooltipRef.current);
+    focusables[0]?.focus();
+
+    return () => {
+      if (previousFocusRef.current instanceof HTMLElement) {
+        previousFocusRef.current.focus();
+      }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const currentStep = steps[stepIndex];
+    if (!currentStep?.tab || currentTab === currentStep.tab) return;
+    setCurrentTab?.(currentStep.tab);
+  }, [currentTab, setCurrentTab, stepIndex, steps]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncLayout = async () => {
+      const currentStep = steps[stepIndex];
+      if (!currentStep) return;
+
+      await new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+      await new Promise((resolve) => setTimeout(resolve, currentStep.tab ? 120 : 0));
+
+      const target = currentStep.target
+        ? Array.from(document.querySelectorAll(currentStep.target)).find(isVisibleTarget) ||
+          document.querySelector(currentStep.target)
+        : null;
+
+      if (target && isVisibleTarget(target)) {
+        target.style.scrollMarginTop = window.matchMedia(MOBILE_TOUR_QUERY).matches ? "92px" : "120px";
+        target.scrollIntoView({
+          behavior: "smooth",
+          block: window.matchMedia(MOBILE_TOUR_QUERY).matches ? "start" : "center",
+        });
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, target ? 320 : 0));
+      if (cancelled) return;
+
+      const rect = target && isVisibleTarget(target) ? target.getBoundingClientRect() : null;
+      const nextLayout = getLayout(rect, currentStep.position, tooltipRef.current);
+      setLayout(nextLayout);
+    };
+
+    syncLayout();
+
+    const handleResize = () => {
+      syncLayout();
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [stepIndex, steps]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        finishTour(onClose);
+        return;
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setStepIndex((current) => Math.min(current + 1, steps.length - 1));
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setStepIndex((current) => Math.max(current - 1, 0));
+      }
+
+      if (event.key === "Tab") {
+        const focusables = getFocusableElements(tooltipRef.current);
+        if (focusables.length === 0) return;
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose, steps.length]);
+
+  const currentStep = steps[stepIndex];
+  const spotlightStyle =
+    layout.showSpotlight && layout.rect
+      ? {
+          top: `${layout.rect.top - PAD}px`,
+          left: `${layout.rect.left - PAD}px`,
+          width: `${layout.rect.width + PAD * 2}px`,
+          height: `${layout.rect.height + PAD * 2}px`,
+        }
+      : undefined;
 
   return (
-    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Quick guide">
-      {/* backdrop */}
+    <>
+      <div className="ls-tour-blocker" aria-hidden="true" />
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={finish}
+        className="ls-tour-spotlight"
         aria-hidden="true"
+        style={{
+          display: layout.showSpotlight ? "block" : "none",
+          ...spotlightStyle,
+        }}
       />
 
-      {/* card */}
-      <div className="absolute inset-0 grid place-items-center px-4 py-8">
-        <div className="w-full max-w-md theme-panel rounded-2xl shadow-2xl p-7 relative flex flex-col gap-5">
+      <section
+        ref={tooltipRef}
+        role="dialog"
+        aria-modal="true"
+        aria-live="polite"
+        aria-labelledby="ls-tour-title"
+        aria-describedby="ls-tour-body"
+        className="ls-tour-tooltip"
+        style={layout.tooltipStyle}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#93c5fd]">
+              Product Tour
+            </div>
+            <h2 id="ls-tour-title" className="mt-2 text-[15px] font-semibold text-slate-100">
+              {currentStep.title}
+            </h2>
+          </div>
 
-          {/* close */}
           <button
-            onClick={finish}
-            className="absolute right-4 top-4 text-subtle hover:opacity-90 rounded focus-visible:outline-none focus-visible:ring-2"
-            style={{ "--tw-ring-color": teal }}
-            aria-label="Close guide"
+            type="button"
+            onClick={() => finishTour(onClose)}
+            className="rounded-md border border-transparent bg-transparent p-0 text-slate-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]"
+            aria-label="Close tour"
           >
             <X className="h-4 w-4" />
           </button>
+        </div>
 
-          {/* step icon */}
-          <div className="flex justify-center">
-            <div
-              className="grid place-items-center rounded-2xl p-4 border-2"
-              style={{ background: mint, borderColor: teal, color: teal }}
-            >
-              <Icon className="h-9 w-9" aria-hidden />
-            </div>
-          </div>
+        <div
+          id="ls-tour-body"
+          className="text-sm leading-6 text-slate-300"
+        >
+          {currentStep.body}
+        </div>
 
-          {/* text */}
-          <div className="text-center">
-            <h2 className="text-xl font-semibold text-default mb-2">{title}</h2>
-            <p className="text-sm text-subtle leading-relaxed">{desc}</p>
-          </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <span className="text-xs text-slate-500">
+            {stepIndex + 1} / {steps.length}
+          </span>
 
-          {/* tips */}
-          <div className="flex flex-wrap justify-center gap-2">
-            {tips.map((t, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border border-default bg-surface text-default"
-              >
-                {t.kbd && (
-                  <kbd
-                    className="font-mono font-bold tracking-wide"
-                    style={{ color: teal }}
-                  >
-                    {t.kbd}
-                  </kbd>
-                )}
-                {t.kbd && <span className="text-subtle opacity-50">—</span>}
-                <span>{t.label}</span>
-              </span>
-            ))}
-          </div>
-
-          {/* progress — clickable dots + step counter */}
-          <div className="flex items-center justify-center gap-2">
-            {Array.from({ length: total }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setStep(i)}
-                aria-label={`Go to step ${i + 1}`}
-                className={`h-2 rounded-full transition-all focus-visible:outline-none ${
-                  i === step ? "w-6" : "w-2 opacity-40 hover:opacity-60"
-                }`}
-                style={{ background: i === step ? teal : "var(--border)" }}
-              />
-            ))}
-            <span className="ml-2 text-xs text-subtle tabular-nums select-none">
-              {step + 1} / {total}
-            </span>
-          </div>
-
-          {/* nav */}
-          <div className="flex items-center justify-between">
+          <div className="ml-auto flex items-center gap-2">
             <button
               type="button"
-              onClick={finish}
-              className="text-sm text-subtle hover:opacity-90 focus-visible:outline-none"
+              onClick={() => setStepIndex((current) => Math.max(current - 1, 0))}
+              disabled={stepIndex === 0}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm text-slate-400 transition hover:border-slate-600 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]"
             >
-              Skip
+              Back
             </button>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setStep((s) => Math.max(0, s - 1))}
-                disabled={step === 0}
-                className="inline-flex items-center gap-1 rounded-lg border border-default px-3 py-1.5 text-sm text-default disabled:opacity-30 hover:enabled:opacity-80 focus-visible:outline-none focus-visible:ring-2"
-                style={{ "--tw-ring-color": teal }}
-              >
-                <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
-                Back
-              </button>
-
-              {step < total - 1 ? (
-                <button
-                  type="button"
-                  onClick={() => setStep((s) => Math.min(total - 1, s + 1))}
-                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-white shadow-sm hover:brightness-95 focus-visible:outline-none focus-visible:ring-2"
-                  style={{ background: teal, "--tw-ring-color": teal }}
-                >
-                  Next
-                  <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={finish}
-                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-white shadow-sm hover:brightness-95 focus-visible:outline-none focus-visible:ring-2"
-                  style={{ background: teal, "--tw-ring-color": teal }}
-                >
-                  Get started
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (stepIndex === steps.length - 1) {
+                  finishTour(onClose);
+                  return;
+                }
+                setStepIndex((current) => Math.min(current + 1, steps.length - 1));
+              }}
+              className="rounded-lg border border-[#2563eb] bg-[#2563eb] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#93c5fd]"
+            >
+              {stepIndex === steps.length - 1 ? "Finish" : "Next"}
+            </button>
           </div>
-
         </div>
-      </div>
-    </div>
+      </section>
+    </>
   );
+}
+
+function getLayout(rect, position, tooltipElement) {
+  const mobile = window.matchMedia(MOBILE_TOUR_QUERY).matches;
+
+  if (mobile) {
+    return {
+      rect,
+      showSpotlight: false,
+      tooltipStyle: {
+        inset: "auto 0 0 0",
+        maxWidth: "none",
+        width: "auto",
+        borderRadius: "18px 18px 0 0",
+        padding: "18px 18px calc(18px + env(safe-area-inset-bottom, 0px))",
+        fontSize: "13px",
+        maxHeight: "min(72vh, 620px)",
+        overflow: "auto",
+      },
+    };
+  }
+
+  const tooltipWidth = tooltipElement?.offsetWidth || 360;
+  const tooltipHeight = tooltipElement?.offsetHeight || 180;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  let top;
+  let left;
+
+  if (!rect || position === "center") {
+    top = Math.max(16, (viewportHeight - tooltipHeight) / 2);
+    left = Math.max(16, (viewportWidth - tooltipWidth) / 2);
+  } else if (position === "top") {
+    top = rect.top - PAD - tooltipHeight - 14;
+    left = Math.max(16, Math.min(rect.left, viewportWidth - tooltipWidth - 16));
+  } else if (position === "left") {
+    top = Math.max(16, Math.min(rect.top, viewportHeight - tooltipHeight - 16));
+    left = rect.left - tooltipWidth - PAD - 14;
+  } else {
+    top = rect.bottom + PAD + 14;
+    left = Math.max(16, Math.min(rect.left, viewportWidth - tooltipWidth - 16));
+  }
+
+  top = Math.max(16, Math.min(top, viewportHeight - tooltipHeight - 16));
+  left = Math.max(16, Math.min(left, viewportWidth - tooltipWidth - 16));
+
+  return {
+    rect,
+    showSpotlight: Boolean(rect),
+    tooltipStyle: {
+      top: `${top}px`,
+      left: `${left}px`,
+      width: "calc(100vw - 32px)",
+      maxWidth: "360px",
+    },
+  };
+}
+
+function finishTour(onClose) {
+  try {
+    localStorage.setItem(TOUR_KEY, "1");
+    const url = new URL(window.location.href);
+    url.searchParams.delete("tour");
+    window.history.replaceState({}, "", url);
+  } catch {
+    // ignore
+  }
+
+  onClose?.();
 }
