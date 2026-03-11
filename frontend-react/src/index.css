@@ -488,6 +488,19 @@ html, body, #root {
   background:
     radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 38%),
     linear-gradient(180deg, rgba(23, 37, 64, 0.98) 0%, rgba(9, 18, 36, 0.985) 100%);
+    linear-gradient(180deg, rgba(28, 45, 72, 0.98) 0%, rgba(15, 24, 41, 0.98) 100%);
+  color: #f1f5f9;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  box-shadow:
+    0 24px 64px rgba(2, 6, 23, 0.58),
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  padding: 20px 22px 16px;
+  line-height: 1.55;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  background: #0f172a;
   color: #f1f5f9;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 14px;
