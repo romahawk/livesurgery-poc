@@ -261,6 +261,7 @@ export default function OnboardingModal({ onClose, currentTab, setCurrentTab, ro
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8fc2ff]">
             <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#93c5fd]">
               Product Tour
             </div>
@@ -272,6 +273,7 @@ export default function OnboardingModal({ onClose, currentTab, setCurrentTab, ro
           <button
             type="button"
             onClick={() => finishTour(onClose)}
+            className="rounded-md border border-transparent bg-transparent p-0 text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#93c5fd]"
             className="rounded-md border border-transparent bg-transparent p-0 text-slate-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]"
             aria-label="Close tour"
           >
@@ -281,12 +283,14 @@ export default function OnboardingModal({ onClose, currentTab, setCurrentTab, ro
 
         <div
           id="ls-tour-body"
+          className="text-sm leading-6 text-slate-200/90"
           className="text-sm leading-6 text-slate-300"
         >
           {currentStep.body}
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <span className="text-xs text-slate-400">
           <span className="text-xs text-slate-500">
             {stepIndex + 1} / {steps.length}
           </span>
@@ -296,6 +300,7 @@ export default function OnboardingModal({ onClose, currentTab, setCurrentTab, ro
               type="button"
               onClick={() => setStepIndex((current) => Math.max(current - 1, 0))}
               disabled={stepIndex === 0}
+              className="rounded-lg border border-white/12 bg-white/[0.04] px-3.5 py-2 text-sm text-slate-200 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/[0.02] disabled:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#93c5fd]"
               className="rounded-lg border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm text-slate-400 transition hover:border-slate-600 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]"
             >
               Back
