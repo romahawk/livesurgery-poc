@@ -3,7 +3,6 @@ import {
   PlayCircle,
   Archive as ArchiveIcon,
   BarChart3,
-  TvMinimalPlay,
   CircleDot,
   Sun,
   Moon,
@@ -12,49 +11,13 @@ import {
   X,
 } from "lucide-react";
 import { useTheme } from "../theme/useTheme.js";
+import BrandLogo from "./BrandLogo";
 
 const ALL_TABS = [
   { id: "Live", label: "Live", icon: PlayCircle },
   { id: "Archive", label: "Archive", icon: ArchiveIcon },
   { id: "Analytics", label: "Analytics", icon: BarChart3 },
 ];
-
-/** Brand logo */
-function BrandLogo({ size = 40 }) {
-  const iconSize = Math.round(size * 0.62);
-
-  return (
-    <a className="inline-flex items-center gap-2 select-none" href="/" aria-label="LiveSurgery">
-      <span
-        aria-hidden="true"
-        className="grid place-items-center rounded-md border"
-        style={{
-          width: size,
-          height: size,
-          background: "var(--ls-mint, #CFF4EC)",
-          borderColor: "var(--ls-teal, #15B8A6)",
-        }}
-      >
-        <TvMinimalPlay
-          size={iconSize}
-          strokeWidth={2.5}
-          style={{ color: "var(--ls-teal, #15B8A6)" }}
-        />
-      </span>
-      <span
-        className="leading-none tracking-tight"
-        style={{
-          fontFamily: "'Manrope', Inter, system-ui, sans-serif",
-          fontWeight: 700,
-          fontSize: 22,
-        }}
-      >
-        <span style={{ color: "var(--ls-teal, #15B8A6)" }}>Live</span>
-        <span style={{ color: "var(--brand-word, var(--ls-navy, #0E2A47))" }}>Surgery</span>
-      </span>
-    </a>
-  );
-}
 
 export default function Navbar({
   role,
