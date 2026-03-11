@@ -485,9 +485,11 @@ html, body, #root {
   position: fixed;
   z-index: 9999;
   max-width: 360px;
-  background:
+  background-color: #091224;
+  background-image:
     radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 38%),
     linear-gradient(180deg, rgba(23, 37, 64, 0.98) 0%, rgba(9, 18, 36, 0.985) 100%);
+  background-repeat: no-repeat;
   color: #f1f5f9;
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 14px;
